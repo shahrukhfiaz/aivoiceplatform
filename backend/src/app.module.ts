@@ -13,6 +13,7 @@ import { NumbersModule } from './numbers/numbers.module';
 import { TrunksModule } from './trunks/trunks.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { RecordingsModule } from './recordings/recordings.module';
+import { BrandingModule } from './branding/branding.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { RecordingsModule } from './recordings/recordings.module';
     TrunksModule,
     WebhooksModule,
     RecordingsModule,
+    BrandingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

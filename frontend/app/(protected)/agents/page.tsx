@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Play, Square, PlusCircle, Waves, Pencil, Trash2, Shield } from 'lucide-react';
+import { Play, Square, PlusCircle, Waves, Pencil, Trash2, Shield, Loader2, Copy, Phone } from 'lucide-react';
 import { apiFetch, type PaginatedResponse } from '@/lib/api';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -68,6 +69,16 @@ type AgentDto = {
   providerLlm?: ProviderDto | null;
   providerTts?: ProviderDto | null;
   providerSts?: ProviderDto | null;
+};
+
+type VicidialConfigDto = {
+  agentId: string;
+  agentName: string;
+  sipExtension: string;
+  asteriskHost: string;
+  asteriskPort: string;
+  sipPeerConfig: string;
+  dialplanConfig: string;
 };
 
 const createAgentSchema = (dict: Dictionary) =>
@@ -198,6 +209,9 @@ export default function AgentsPage() {
   const [deleteTarget, setDeleteTarget] = useState<AgentDto | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [vicidialDialogOpen, setVicidialDialogOpen] = useState(false);
+  const [vicidialConfig, setVicidialConfig] = useState<VicidialConfigDto | null>(null);
+  const [vicidialLoading, setVicidialLoading] = useState(false);
   const { dictionary } = useI18n();
   const { user } = useAuth();
   const isReadOnly = user?.role === 'viewer';
@@ -418,18 +432,44 @@ export default function AgentsPage() {
       return;
     }
     setActionMap((prev) => ({ ...prev, [id]: true }));
+    setError(null);
     try {
-      await apiFetch(`/agents/${id}/${action}`, {
+      console.log(`Attempting to ${action} agent ${id}`);
+      const response = await apiFetch<AgentDto>(`/agents/${id}/${action}`, {
         method: 'POST',
         body: JSON.stringify({}),
       });
+      console.log(`Successfully ${action} agent ${id}`, response);
+      
+      // Update the agent status in the local state immediately for better UX
+      setAgents((prev) =>
+        prev.map((agent) =>
+          agent.id === id
+            ? { ...agent, status: response.status || (action === 'run' ? 'running' : 'stopped') }
+            : agent
+        )
+      );
+      
+      // Reload data to ensure consistency
       await loadData();
     } catch (err) {
+      console.error(`Error ${action}ing agent ${id}:`, err);
       if (err instanceof Error) {
-        setError(err.message);
+        // Handle authentication errors
+        if (err.message === 'Unauthorized' || (err as any).status === 401) {
+          setError('Your session has expired. Please log in again.');
+          // Optionally redirect to login after a delay
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+        } else {
+          setError(err.message);
+        }
       } else {
         setError(dictionary.agents.errors.action);
       }
+      // Reload data even on error to get accurate status
+      await loadData();
     } finally {
       setActionMap((prev) => ({ ...prev, [id]: false }));
     }
@@ -438,6 +478,32 @@ export default function AgentsPage() {
   const renderProvider = (provider?: ProviderDto | null) => {
     if (!provider) return '—';
     return `${provider.name} (${provider.type})`;
+  };
+
+  const fetchVicidialConfig = async (agentId: string) => {
+    setVicidialLoading(true);
+    try {
+      const config = await apiFetch<VicidialConfigDto>(`/agents/${agentId}/vicidial-config`);
+      setVicidialConfig(config);
+      setVicidialDialogOpen(true);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to load VICIdial configuration');
+      }
+    } finally {
+      setVicidialLoading(false);
+    }
+  };
+
+  const copyToClipboard = async (text: string | undefined) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
   };
 
   const pageSizeOptions = [10, 25, 50];
@@ -591,29 +657,50 @@ export default function AgentsPage() {
                       <TableCell>{renderProvider(agent.providerSts)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex flex-wrap justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={isReadOnly || actionMap[agent.id]}
-                            onClick={() => triggerAction(agent.id, 'run')}
-                          >
-                            <Play className="mr-2 h-3 w-3" /> {dictionary.common.buttons.run}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            disabled={isReadOnly || actionMap[agent.id]}
-                            onClick={() => triggerAction(agent.id, 'stop')}
-                          >
-                            <Square className="mr-2 h-3 w-3" /> {dictionary.common.buttons.stop}
-                          </Button>
+                          {agent.status === 'stopped' ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={isReadOnly || actionMap[agent.id]}
+                              onClick={() => triggerAction(agent.id, 'run')}
+                            >
+                              {actionMap[agent.id] ? (
+                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                              ) : (
+                                <Play className="mr-2 h-3 w-3" />
+                              )}
+                              {dictionary.common.buttons.run}
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={isReadOnly || actionMap[agent.id]}
+                              onClick={() => triggerAction(agent.id, 'stop')}
+                            >
+                              {actionMap[agent.id] ? (
+                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                              ) : (
+                                <Square className="mr-2 h-3 w-3" />
+                              )}
+                              {dictionary.common.buttons.stop}
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => openEditDialog(agent)}
-                            disabled={isReadOnly}
+                            disabled={isReadOnly || actionMap[agent.id]}
                           >
                             <Pencil className="mr-2 h-3 w-3" /> {dictionary.common.buttons.edit}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => fetchVicidialConfig(agent.id)}
+                            disabled={vicidialLoading}
+                          >
+                            <Phone className="mr-2 h-3 w-3" /> {dictionary.agents.sipCredentials.button}
                           </Button>
                           <Button
                             size="sm"
@@ -623,7 +710,7 @@ export default function AgentsPage() {
                               setDeleteTarget(agent);
                               setDeleteDialogOpen(true);
                             }}
-                            disabled={isReadOnly || (deleting && deleteTarget?.id === agent.id)}
+                            disabled={isReadOnly || (deleting && deleteTarget?.id === agent.id) || actionMap[agent.id]}
                           >
                             <Trash2 className="mr-2 h-3 w-3" /> {dictionary.common.buttons.delete}
                           </Button>
@@ -782,6 +869,45 @@ export default function AgentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={vicidialDialogOpen} onOpenChange={setVicidialDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{dictionary.agents.sipCredentials.title}</DialogTitle>
+            <DialogDescription>
+              {dictionary.agents.sipCredentials.description} - {vicidialConfig?.agentName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm font-medium">{dictionary.agents.sipCredentials.sipPeer}</Label>
+                <Button size="sm" variant="outline" onClick={() => copyToClipboard(vicidialConfig?.sipPeerConfig)}>
+                  <Copy className="h-3 w-3 mr-1" /> Copy
+                </Button>
+              </div>
+              <pre className="bg-muted p-3 rounded text-xs overflow-x-auto whitespace-pre-wrap font-mono">
+                {vicidialConfig?.sipPeerConfig}
+              </pre>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm font-medium">{dictionary.agents.sipCredentials.dialplan}</Label>
+                <Button size="sm" variant="outline" onClick={() => copyToClipboard(vicidialConfig?.dialplanConfig)}>
+                  <Copy className="h-3 w-3 mr-1" /> Copy
+                </Button>
+              </div>
+              <pre className="bg-muted p-3 rounded text-xs overflow-x-auto whitespace-pre-wrap font-mono">
+                {vicidialConfig?.dialplanConfig}
+              </pre>
+            </div>
+            <div className="text-sm text-muted-foreground border-t pt-4">
+              <p><strong>{dictionary.agents.sipCredentials.extension}:</strong> {vicidialConfig?.sipExtension}</p>
+              <p><strong>{dictionary.agents.sipCredentials.host}:</strong> {vicidialConfig?.asteriskHost}:{vicidialConfig?.asteriskPort}</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

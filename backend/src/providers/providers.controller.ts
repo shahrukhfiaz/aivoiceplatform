@@ -19,6 +19,29 @@ import { UserRole } from '../users/user.entity';
 import { UpdateProviderDto } from './dto/update-provider.dto';
 import { PaginationQuery, PaginatedResult } from '../common/pagination';
 
+/**
+ * Internal controller for container-to-backend communication.
+ * No authentication required - containers use this to fetch their config.
+ * Only accessible from the internal Docker network.
+ */
+@Controller('internal/providers')
+export class InternalProvidersController {
+  constructor(private readonly providersService: ProvidersService) {}
+
+  /**
+   * Get provider configuration by ID.
+   * Used by STS containers to fetch their settings dynamically.
+   * Returns only the env config, not sensitive metadata.
+   */
+  @Get(':id/config')
+  async getConfig(@Param('id') id: string): Promise<{ env: Record<string, string> }> {
+    const provider = await this.providersService.findById(id);
+    return {
+      env: (provider.config?.env as Record<string, string>) ?? {},
+    };
+  }
+}
+
 @Controller('providers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProvidersController {

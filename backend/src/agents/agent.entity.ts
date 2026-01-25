@@ -39,6 +39,9 @@ export class Agent {
   @Column({ type: 'text', default: AgentMode.PIPELINE })
   mode: AgentMode;
 
+  @Column({ type: 'text', unique: true, nullable: true })
+  sipExtension: string | null;
+
   @ManyToOne(() => Provider, { nullable: true, eager: true })
   @JoinColumn({ name: 'provider_asr_id' })
   providerAsr?: Provider | null;

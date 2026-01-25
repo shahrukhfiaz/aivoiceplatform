@@ -66,7 +66,8 @@ export class RecordingsService {
   }
 
   private getRecordingPath(callUuid: string): string {
-    return path.join(this.resolveMonitorPath(), `${callUuid}.wav`);
+    const tenant = process.env.TENANT || 'demo';
+    return path.join(this.resolveMonitorPath(), tenant, `${callUuid}.wav`);
   }
 
   private resolveMonitorPath(): string {
@@ -77,13 +78,16 @@ export class RecordingsService {
   }
 
   private async syncFromFilesystem(): Promise<void> {
+    const tenant = process.env.TENANT || 'demo';
     const monitorPath = this.resolveMonitorPath();
+    const tenantPath = path.join(monitorPath, tenant);
+
     let fileNames: string[] = [];
     try {
-      fileNames = await fs.readdir(monitorPath);
+      fileNames = await fs.readdir(tenantPath);
     } catch (error: any) {
       if (error?.code === 'ENOENT') {
-        this.logger.warn(`Monitor path not found: ${monitorPath}`);
+        this.logger.warn(`Tenant recordings path not found: ${tenantPath}`);
         return;
       }
       throw error;
@@ -97,7 +101,7 @@ export class RecordingsService {
     for (const fileName of wavFiles) {
       const callUuid = path.basename(fileName, path.extname(fileName));
       seen.add(callUuid);
-      const filePath = path.join(monitorPath, fileName);
+      const filePath = path.join(tenantPath, fileName);
       let stats;
       try {
         stats = await fs.stat(filePath);

@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth';
 import { useI18n } from '@/lib/i18n';
+import { useBranding } from '@/lib/branding';
 import {
   Card,
   CardContent,
@@ -34,6 +35,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { dictionary } = useI18n();
+  const { branding } = useBranding();
 
   const schema = useMemo(
     () =>
@@ -71,16 +73,32 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, router]);
 
+  // Update document title with branding
+  useEffect(() => {
+    if (branding) {
+      document.title = branding.loginTitle || branding.appName || 'AVR Admin';
+    }
+  }, [branding]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
         <Card className="w-[360px] shadow-lg">
           <CardHeader>
             <div className="flex flex-col items-center gap-4">
-              <Image src="/logo.svg" alt={dictionary.login.title} width={72} height={72} />
+              <Image
+                src={branding?.logoUrl || "/logo.svg"}
+                alt={branding?.loginTitle || branding?.appName || dictionary.login.title}
+                width={72}
+                height={72}
+              />
               <div className="text-center">
-                <CardTitle className="text-2xl">{dictionary.login.title}</CardTitle>
-                <CardDescription>{dictionary.login.description}</CardDescription>
+                <CardTitle className="text-2xl">
+                  {branding?.loginTitle || branding?.appName || dictionary.login.title}
+                </CardTitle>
+                <CardDescription>
+                  {branding?.loginDescription || dictionary.login.description}
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -134,7 +152,12 @@ export default function LoginPage() {
               {dictionary.login.help}
             </p>
             <p className="text-center text-xs text-muted-foreground">
-              <Link className="underline" href="https://wiki.agentvoiceresponse.com" target="_blank" rel="noreferrer">
+              <Link
+                className="underline"
+                href={branding?.wikiUrl || "https://wiki.agentvoiceresponse.com"}
+                target="_blank"
+                rel="noreferrer"
+              >
                 {dictionary.login.docs}
               </Link>
             </p>

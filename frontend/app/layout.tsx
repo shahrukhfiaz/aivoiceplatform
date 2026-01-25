@@ -3,6 +3,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/lib/auth';
 import { LanguageProvider } from '@/lib/i18n';
+import { BrandingProvider } from '@/lib/branding';
 import { PublicEnvScript } from 'next-runtime-env';
 
 export const metadata: Metadata = {
@@ -23,7 +24,9 @@ export default function RootLayout({
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider>
           <LanguageProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <BrandingProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </BrandingProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

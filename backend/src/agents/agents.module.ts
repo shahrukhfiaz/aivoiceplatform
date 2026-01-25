@@ -6,7 +6,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Provider } from '../providers/provider.entity';
 import { Agent } from './agent.entity';
 import { AgentsService } from './agents.service';
-import { AgentsController } from './agents.controller';
+import { AgentsController, InternalAgentsController } from './agents.controller';
 
 @Module({
   imports: [
@@ -15,6 +15,6 @@ import { AgentsController } from './agents.controller';
     AsteriskModule,
   ],
   providers: [AgentsService, RolesGuard],
-  controllers: [AgentsController],
+  controllers: [AgentsController, InternalAgentsController],
 })
 export class AgentsModule {}

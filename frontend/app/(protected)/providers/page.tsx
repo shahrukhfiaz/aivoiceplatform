@@ -12,7 +12,7 @@ import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ServerCog, Pencil, Trash2, Shield } from 'lucide-react';
+import { ServerCog, Pencil, Trash2, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiFetch, ApiError, type PaginatedResponse } from '@/lib/api';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
@@ -81,6 +81,7 @@ type TemplateField = {
   inputType?: 'text' | 'password';
   widget?: 'textarea' | 'select';
   options?: { value: string; label: string }[];
+  advanced?: boolean;
 };
 
 interface ProviderTemplate {
@@ -266,6 +267,159 @@ export default function ProvidersPage() {
         },
       ],
     },
+    {
+      id: 'sts-deepgram',
+      type: 'STS',
+      label: dictionary.providers.templates.stsDeepgram.label,
+      description: dictionary.providers.templates.stsDeepgram.description,
+      defaultImage: 'agentvoiceresponse/avr-sts-deepgram',
+      defaults: {
+        DEEPGRAM_ASR_MODEL: 'nova-3',
+        DEEPGRAM_TTS_MODEL: 'aura-2-thalia-en',
+        DEEPGRAM_SAMPLE_RATE: '8000',
+        OPENAI_MODEL: 'gpt-4o-mini',
+        DEEPGRAM_AGENT_LANGUAGE: 'en',
+        OPENAI_TEMPERATURE: '0.7',
+        DEEPGRAM_SMART_FORMAT: 'false',
+        DEEPGRAM_OUTPUT_ENCODING: 'linear16',
+        DEEPGRAM_HISTORY_ENABLED: 'true',
+        DEEPGRAM_EXPERIMENTAL: 'false',
+        DEEPGRAM_MIP_OPT_OUT: 'false',
+      },
+      fields: [
+        {
+          key: 'DEEPGRAM_API_KEY',
+          label: dictionary.providers.fieldsExtra.deepgramApiKey,
+          placeholder: 'your-deepgram-api-key',
+          required: true,
+          inputType: 'password',
+        },
+        {
+          key: 'DEEPGRAM_GREETING',
+          label: dictionary.providers.fieldsExtra.deepgramGreeting,
+          placeholder: dictionary.providers.placeholders.deepgramGreeting,
+        },
+        {
+          key: 'AGENT_PROMPT',
+          label: dictionary.providers.fieldsExtra.agentPrompt,
+          placeholder: dictionary.providers.placeholders.agentPrompt,
+          required: true,
+          widget: 'textarea',
+        },
+        {
+          key: 'DEEPGRAM_ASR_MODEL',
+          label: dictionary.providers.fieldsExtra.deepgramAsrModel,
+          placeholder: 'nova-3',
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_TTS_MODEL',
+          label: dictionary.providers.fieldsExtra.deepgramTtsModel,
+          placeholder: 'aura-2-thalia-en',
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_SAMPLE_RATE',
+          label: dictionary.providers.fieldsExtra.deepgramSampleRate,
+          placeholder: '8000',
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_AGENT_LANGUAGE',
+          label: dictionary.providers.fieldsExtra.deepgramAgentLanguage,
+          placeholder: dictionary.providers.placeholders.deepgramAgentLanguage,
+          advanced: true,
+        },
+        {
+          key: 'OPENAI_MODEL',
+          label: dictionary.providers.fieldsExtra.openaiModel,
+          placeholder: 'gpt-4o-mini',
+          advanced: true,
+        },
+        {
+          key: 'OPENAI_TEMPERATURE',
+          label: dictionary.providers.fieldsExtra.openaiTemperature,
+          placeholder: '0.7',
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_KEYTERMS',
+          label: dictionary.providers.fieldsExtra.deepgramKeyterms,
+          placeholder: dictionary.providers.placeholders.deepgramKeyterms,
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_SMART_FORMAT',
+          label: dictionary.providers.fieldsExtra.deepgramSmartFormat,
+          widget: 'select',
+          options: [
+            { value: 'true', label: 'Enabled' },
+            { value: 'false', label: 'Disabled' },
+          ],
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_OUTPUT_ENCODING',
+          label: dictionary.providers.fieldsExtra.deepgramOutputEncoding,
+          placeholder: 'linear16',
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_OUTPUT_BITRATE',
+          label: dictionary.providers.fieldsExtra.deepgramOutputBitrate,
+          placeholder: '48000',
+          advanced: true,
+        },
+        {
+          key: 'OPENAI_CONTEXT_LENGTH',
+          label: dictionary.providers.fieldsExtra.openaiContextLength,
+          placeholder: dictionary.providers.placeholders.openaiContextLength,
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_TAGS',
+          label: dictionary.providers.fieldsExtra.deepgramTags,
+          placeholder: dictionary.providers.placeholders.deepgramTags,
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_EXPERIMENTAL',
+          label: dictionary.providers.fieldsExtra.deepgramExperimental,
+          widget: 'select',
+          options: [
+            { value: 'true', label: 'Enabled' },
+            { value: 'false', label: 'Disabled' },
+          ],
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_MIP_OPT_OUT',
+          label: dictionary.providers.fieldsExtra.deepgramMipOptOut,
+          widget: 'select',
+          options: [
+            { value: 'true', label: 'Opt Out' },
+            { value: 'false', label: 'Opt In' },
+          ],
+          advanced: true,
+        },
+        {
+          key: 'DEEPGRAM_HISTORY_ENABLED',
+          label: dictionary.providers.fieldsExtra.deepgramHistoryEnabled,
+          widget: 'select',
+          options: [
+            { value: 'true', label: 'Enabled' },
+            { value: 'false', label: 'Disabled' },
+          ],
+          advanced: true,
+        },
+        {
+          key: 'AMI_URL',
+          label: dictionary.providers.fieldsExtra.amiUrl,
+          placeholder: 'http://avr-ami:6006',
+          advanced: true,
+        },
+      ],
+    },
   ];
 
   const createProviderSchema = (dict: Dictionary, templates: ProviderTemplate[]) => z
@@ -330,6 +484,18 @@ export default function ProvidersPage() {
   };
 
   const inferTemplate = (provider: ProviderDto): ProviderTemplate | undefined => {
+    // First, try to match by Docker image (most reliable)
+    const providerImage = provider.config?.image;
+    if (providerImage) {
+      const imageMatch = providerTemplates.find((tpl) => 
+        tpl.type === provider.type && tpl.defaultImage === providerImage
+      );
+      if (imageMatch) {
+        return imageMatch;
+      }
+    }
+    
+    // Fallback: match by required fields in env
     if (!provider.config?.env) {
       return undefined;
     }
@@ -454,12 +620,14 @@ export default function ProvidersPage() {
     );
 
     const initialPopulateRef = useRef<boolean>(skipInitialPopulate);
+    const previousTemplateIdRef = useRef<string | undefined>(templateId);
 
     useEffect(() => {
       if (filteredTemplates.length === 0) {
         form.setValue('templateId', undefined, { shouldDirty: false, shouldValidate: true });
         form.setValue('image', '', { shouldDirty: false });
         form.setValue('env', {}, { shouldDirty: false });
+        previousTemplateIdRef.current = undefined;
         return;
       }
 
@@ -477,26 +645,38 @@ export default function ProvidersPage() {
       if (!selectedTemplate) {
         form.setValue('image', '', { shouldDirty: false });
         form.setValue('env', {}, { shouldDirty: false });
+        previousTemplateIdRef.current = undefined;
         return;
       }
 
       if (initialPopulateRef.current) {
         initialPopulateRef.current = false;
+        previousTemplateIdRef.current = selectedTemplate.id;
         return;
       }
 
-      const previousEnv = form.getValues('env') ?? {};
+      // Check if the template actually changed
+      const templateChanged = previousTemplateIdRef.current !== selectedTemplate.id;
+      previousTemplateIdRef.current = selectedTemplate.id;
+
+      // Always use fresh defaults when switching templates to avoid stale cached values
       const nextEnv = buildDefaultEnv(selectedTemplate);
-      selectedTemplate.fields.forEach((field) => {
-        const previousValue = previousEnv[field.key];
-        if (previousValue && previousValue.trim().length > 0) {
-          nextEnv[field.key] = previousValue;
-        }
-      });
+
+      // Only preserve previous values if the template did NOT change
+      // (e.g., when form is first loaded or user edits within the same template)
+      if (!templateChanged) {
+        const previousEnv = form.getValues('env') ?? {};
+        selectedTemplate.fields.forEach((field) => {
+          const previousValue = previousEnv[field.key];
+          if (previousValue && previousValue.trim().length > 0) {
+            nextEnv[field.key] = previousValue;
+          }
+        });
+      }
       form.setValue('env', nextEnv, { shouldDirty: false });
 
       const imageState = form.getFieldState('image');
-      const shouldUpdateImage = resetImageOnTemplateChange || !imageState.isDirty;
+      const shouldUpdateImage = resetImageOnTemplateChange || !imageState.isDirty || templateChanged;
 
       if (shouldUpdateImage && selectedTemplate.defaultImage) {
         form.setValue('image', selectedTemplate.defaultImage, { shouldDirty: false });
@@ -525,6 +705,8 @@ export default function ProvidersPage() {
   const [deleteTarget, setDeleteTarget] = useState<ProviderDto | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvancedEdit, setShowAdvancedEdit] = useState(false);
 
   const defaultType: ProviderType = 'STS';
   const defaultTemplate = providerTemplates.find((tpl) => tpl.type === defaultType);
@@ -644,6 +826,7 @@ export default function ProvidersPage() {
       const body = {
         config: {
           ...editingProvider.config,
+          ...(values.image && { image: values.image }),
           env: values.env ? Object.fromEntries(
             Object.entries(values.env)
               .map(([key, value]) => [key, (value ?? '').trim()])
@@ -733,7 +916,7 @@ export default function ProvidersPage() {
                       <FormItem>
                         <FormLabel>{dictionary.providers.fields.name}</FormLabel>
                         <FormControl>
-                          <Input placeholder={dictionary.providers.placeholders.name} {...field} />
+                          <Input placeholder={dictionary.providers.placeholders.name} {...field} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -809,54 +992,138 @@ export default function ProvidersPage() {
                               <Input
                                 placeholder={createSelectedTemplate.defaultImage ?? 'repository:tag'}
                                 {...field}
+                                value={field.value ?? ''}
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      {createSelectedTemplate.fields.map((fieldConfig) => (
-                        <FormField
-                          key={fieldConfig.key}
-                          control={form.control}
-                          name={`env.${fieldConfig.key}` as const}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>
-                                {fieldConfig.label}
-                                {fieldConfig.required ? (
-                                  <span className="text-destructive"> *</span>
-                                ) : null}
-                              </FormLabel>
-                              <FormControl>
-                                {fieldConfig.widget === 'textarea' ? (
-                                  <Textarea placeholder={fieldConfig.placeholder} {...field} />
-                                ) : fieldConfig.widget === 'select' ? (
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder={fieldConfig.placeholder} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {(fieldConfig.options ?? []).map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                          {option.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                ) : (
-                                  <Input
-                                    type={fieldConfig.inputType === 'password' ? 'password' : 'text'}
-                                    placeholder={fieldConfig.placeholder}
-                                    {...field}
-                                  />
+                      {useMemo(() => {
+                        if (!createSelectedTemplate) return null;
+                        const basicFields = createSelectedTemplate.fields.filter((f) => !f.advanced);
+                        const advancedFields = createSelectedTemplate.fields.filter((f) => f.advanced);
+
+                        return (
+                          <>
+                            {basicFields.map((fieldConfig) => (
+                              <FormField
+                                key={fieldConfig.key}
+                                control={form.control}
+                                name={`env.${fieldConfig.key}` as const}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>
+                                      {fieldConfig.label}
+                                      {fieldConfig.required ? (
+                                        <span className="text-destructive"> *</span>
+                                      ) : null}
+                                    </FormLabel>
+                                    <FormControl>
+                                      {fieldConfig.widget === 'textarea' ? (
+                                        <Textarea 
+                                          placeholder={fieldConfig.placeholder} 
+                                          {...field}
+                                          value={field.value ?? ''}
+                                        />
+                                      ) : fieldConfig.widget === 'select' ? (
+                                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder={fieldConfig.placeholder} />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {(fieldConfig.options ?? []).map((option) => (
+                                              <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      ) : (
+                                        <Input
+                                          type={fieldConfig.inputType === 'password' ? 'password' : 'text'}
+                                          placeholder={fieldConfig.placeholder}
+                                          {...field}
+                                          value={field.value ?? ''}
+                                        />
+                                      )}
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
                                 )}
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      ))}
+                              />
+                            ))}
+                            {advancedFields.length > 0 && (
+                              <div className="space-y-4">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="w-full justify-between"
+                                  onClick={() => setShowAdvanced(!showAdvanced)}
+                                >
+                                  <span>Advanced Settings</span>
+                                  {showAdvanced ? (
+                                    <ChevronUp className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                {showAdvanced && (
+                                  <div className="space-y-4 rounded-md border border-border/60 bg-muted/30 p-4">
+                                    {advancedFields.map((fieldConfig) => (
+                                      <FormField
+                                        key={fieldConfig.key}
+                                        control={form.control}
+                                        name={`env.${fieldConfig.key}` as const}
+                                        render={({ field }) => (
+                                          <FormItem>
+                                            <FormLabel>
+                                              {fieldConfig.label}
+                                              {fieldConfig.required ? (
+                                                <span className="text-destructive"> *</span>
+                                              ) : null}
+                                            </FormLabel>
+                                            <FormControl>
+                                              {fieldConfig.widget === 'textarea' ? (
+                                                <Textarea 
+                                                  placeholder={fieldConfig.placeholder} 
+                                                  {...field}
+                                                  value={field.value ?? ''}
+                                                />
+                                              ) : fieldConfig.widget === 'select' ? (
+                                                <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                                  <SelectTrigger>
+                                                    <SelectValue placeholder={fieldConfig.placeholder} />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    {(fieldConfig.options ?? []).map((option) => (
+                                                      <SelectItem key={option.value} value={option.value}>
+                                                        {option.label}
+                                                      </SelectItem>
+                                                    ))}
+                                                  </SelectContent>
+                                                </Select>
+                                              ) : (
+                                                <Input
+                                                  type={fieldConfig.inputType === 'password' ? 'password' : 'text'}
+                                                  placeholder={fieldConfig.placeholder}
+                                                  {...field}
+                                                  value={field.value ?? ''}
+                                                />
+                                              )}
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        );
+                      }, [createSelectedTemplate, showAdvanced, form])}
                     </div>
                   ) : null}
                 </div>
@@ -975,9 +1242,9 @@ export default function ProvidersPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{dictionary.providers.fields.name}</FormLabel>
-                      <FormControl>
-                          <Input placeholder={dictionary.providers.placeholders.name} {...field} disabled />
-                      </FormControl>
+                          <FormControl>
+                            <Input placeholder={dictionary.providers.placeholders.name} {...field} value={field.value ?? ''} disabled />
+                          </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -1050,53 +1317,134 @@ export default function ProvidersPage() {
                             <Input
                               placeholder={editSelectedTemplate.defaultImage ?? 'repository:tag'}
                               {...field}
-                              disabled
+                              value={field.value ?? ''}
                             />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                    {editSelectedTemplate.fields.map((fieldConfig) => (
-                      <FormField
-                        key={fieldConfig.key}
-                        control={editForm.control}
-                        name={`env.${fieldConfig.key}` as const}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              {fieldConfig.label}
-                              {fieldConfig.required ? <span className="text-destructive"> *</span> : null}
-                            </FormLabel>
-                            <FormControl>
-                              {fieldConfig.widget === 'textarea' ? (
-                                <Textarea placeholder={fieldConfig.placeholder} {...field} />
-                              ) : fieldConfig.widget === 'select' ? (
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder={fieldConfig.placeholder} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {(fieldConfig.options ?? []).map((option) => (
-                                      <SelectItem key={option.value} value={option.value}>
-                                        {option.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Input
-                                  type={fieldConfig.inputType === 'password' ? 'password' : 'text'}
-                                  placeholder={fieldConfig.placeholder}
-                                  {...field}
-                                />
+                    {useMemo(() => {
+                      if (!editSelectedTemplate) return null;
+                      const basicFields = editSelectedTemplate.fields.filter((f) => !f.advanced);
+                      const advancedFields = editSelectedTemplate.fields.filter((f) => f.advanced);
+
+                      return (
+                        <>
+                          {basicFields.map((fieldConfig) => (
+                            <FormField
+                              key={fieldConfig.key}
+                              control={editForm.control}
+                              name={`env.${fieldConfig.key}` as const}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>
+                                    {fieldConfig.label}
+                                    {fieldConfig.required ? <span className="text-destructive"> *</span> : null}
+                                  </FormLabel>
+                                  <FormControl>
+                                    {fieldConfig.widget === 'textarea' ? (
+                                      <Textarea 
+                                        placeholder={fieldConfig.placeholder} 
+                                        {...field}
+                                        value={field.value ?? ''}
+                                      />
+                                    ) : fieldConfig.widget === 'select' ? (
+                                      <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder={fieldConfig.placeholder} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {(fieldConfig.options ?? []).map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                              {option.label}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : (
+                                      <Input
+                                        type={fieldConfig.inputType === 'password' ? 'password' : 'text'}
+                                        placeholder={fieldConfig.placeholder}
+                                        {...field}
+                                        value={field.value ?? ''}
+                                      />
+                                    )}
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
                               )}
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    ))}
+                            />
+                          ))}
+                          {advancedFields.length > 0 && (
+                            <div className="space-y-4">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full justify-between"
+                                onClick={() => setShowAdvancedEdit(!showAdvancedEdit)}
+                              >
+                                <span>Advanced Settings</span>
+                                {showAdvancedEdit ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )}
+                              </Button>
+                              {showAdvancedEdit && (
+                                <div className="space-y-4 rounded-md border border-border/60 bg-muted/30 p-4">
+                                  {advancedFields.map((fieldConfig) => (
+                                    <FormField
+                                      key={fieldConfig.key}
+                                      control={editForm.control}
+                                      name={`env.${fieldConfig.key}` as const}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>
+                                            {fieldConfig.label}
+                                            {fieldConfig.required ? <span className="text-destructive"> *</span> : null}
+                                          </FormLabel>
+                                          <FormControl>
+                                            {fieldConfig.widget === 'textarea' ? (
+                                              <Textarea 
+                                                placeholder={fieldConfig.placeholder} 
+                                                {...field}
+                                                value={field.value ?? ''}
+                                              />
+                                            ) : fieldConfig.widget === 'select' ? (
+                                              <Select onValueChange={field.onChange} value={field.value ?? ''}>
+                                                <SelectTrigger>
+                                                  <SelectValue placeholder={fieldConfig.placeholder} />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {(fieldConfig.options ?? []).map((option) => (
+                                                    <SelectItem key={option.value} value={option.value}>
+                                                      {option.label}
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            ) : (
+                                              <Input
+                                                type={fieldConfig.inputType === 'password' ? 'password' : 'text'}
+                                                placeholder={fieldConfig.placeholder}
+                                                {...field}
+                                                value={field.value ?? ''}
+                                              />
+                                            )}
+                                          </FormControl>
+                                          <FormMessage />
+                                        </FormItem>
+                                      )}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      );
+                      }, [editSelectedTemplate, showAdvancedEdit, editForm])}
                   </div>
                 ) : null}
               </div>

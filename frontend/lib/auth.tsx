@@ -65,7 +65,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     setLoading(false);
-  }, []);
+
+    // Listen for unauthorized events from API calls
+    const handleUnauthorized = () => {
+      setToken(null);
+      setUser(null);
+      setStoredToken(null);
+      router.replace('/login');
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, [router]);
 
   const logout = useCallback(() => {
     setToken(null);

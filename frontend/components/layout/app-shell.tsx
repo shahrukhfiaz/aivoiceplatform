@@ -18,9 +18,7 @@ import {
   Shield,
   X,
   Download,
-  MessageCircle,
-  Github,
-  BookOpen,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
@@ -28,6 +26,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/lib/auth";
+import { useBranding } from "@/lib/branding";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +34,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/lib/i18n";
-import { LanguageToggle } from "@/components/language-toggle";
 import { cn } from "@/lib/utils";
 import {
   Sidebar,
@@ -62,18 +60,20 @@ type NavItem = {
   icon: LucideIcon;
 };
 
-type SocialLink = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-};
-
 export function AppShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { dictionary } = useI18n();
+  const { branding } = useBranding();
   const webRtcClientUrl = env("NEXT_PUBLIC_WEBRTC_CLIENT_URL");
   const [isPhoneOpen, setIsPhoneOpen] = useState(false);
+
+  // Update document title when branding changes
+  useEffect(() => {
+    if (branding?.appName) {
+      document.title = branding.appName;
+    }
+  }, [branding]);
 
   const navPrimaryItems = useMemo<NavItem[]>(
     () => [
@@ -108,7 +108,10 @@ export function AppShell({ children }: PropsWithChildren) {
   );
 
   const navAdministrationItems = useMemo<NavItem[]>(
-    () => [{ href: "/users", label: dictionary.navigation.users, icon: Users }],
+    () => [
+      { href: "/users", label: dictionary.navigation.users, icon: Users },
+      { href: "/settings", label: dictionary.navigation.settings, icon: Settings },
+    ],
     [dictionary]
   );
 
@@ -121,27 +124,6 @@ export function AppShell({ children }: PropsWithChildren) {
     [dictionary]
   );
 
-  const socialLinks = useMemo<SocialLink[]>(
-    () => [
-      {
-        href: "https://discord.gg/DFTU69Hg74",
-        label: "Discord community",
-        icon: MessageCircle,
-      },
-      {
-        href: "https://github.com/orgs/agentvoiceresponse/repositories",
-        label: "GitHub repositories",
-        icon: Github,
-      },
-      {
-        href: "https://wiki.agentvoiceresponse.com/",
-        label: "AVR wiki",
-        icon: BookOpen,
-      },
-    ],
-    []
-  );
-
   return (
     <SidebarProvider>
       <AppShellContent
@@ -151,11 +133,11 @@ export function AppShell({ children }: PropsWithChildren) {
         navTelephonyItems={navTelephonyItems}
         navAdministrationItems={navAdministrationItems}
         navObserveItems={navObserveItems}
-        socialLinks={socialLinks}
         userName={user?.username ?? ""}
         userRole={user?.role ?? ""}
         onLogout={logout}
         dictionary={dictionary}
+        branding={branding}
         children={children}
         webRtcClientUrl={webRtcClientUrl}
         isPhoneOpen={isPhoneOpen}
@@ -172,11 +154,11 @@ type AppShellContentProps = {
   navBuildItems: NavItem[];
   navTelephonyItems: NavItem[];
   navAdministrationItems: NavItem[];
-  socialLinks: SocialLink[];
   userName: string;
   userRole: string;
   onLogout: () => void;
   dictionary: ReturnType<typeof useI18n>["dictionary"];
+  branding: ReturnType<typeof useBranding>["branding"];
   children: PropsWithChildren["children"];
   webRtcClientUrl?: string;
   isPhoneOpen: boolean;
@@ -190,11 +172,11 @@ function AppShellContent({
   navTelephonyItems,
   navAdministrationItems,
   navObserveItems,
-  socialLinks,
   userName,
   userRole,
   onLogout,
   dictionary,
+  branding,
   children,
   webRtcClientUrl,
   isPhoneOpen,
@@ -221,22 +203,22 @@ function AppShellContent({
   return (
     <div className="flex min-h-screen bg-background">
       <SidebarOverlay />
-      <Sidebar className="w-64 border-border bg-card/60 backdrop-blur">
-        <div className="flex h-full flex-col gap-6 px-6 py-8">
-          <SidebarHeader className="border-none p-0">
+      <Sidebar className="sticky top-0 h-screen w-64 border-border bg-card/60 backdrop-blur">
+        <div className="flex h-full flex-col px-6 py-6">
+          <SidebarHeader className="mb-6 shrink-0 border-none p-0">
             <div className="flex items-center gap-3">
               <Image
-                src="/logo.svg"
-                alt={dictionary.common.appName}
+                src={branding?.logoUrl || "/logo.svg"}
+                alt={branding?.appName || dictionary.common.appName}
                 width={36}
                 height={36}
               />
               <div className="text-lg font-semibold tracking-tight">
-                {dictionary.common.panelName}
+                {branding?.panelName || dictionary.common.panelName}
               </div>
             </div>
           </SidebarHeader>
-          <SidebarContent className="flex flex-1 flex-col gap-6 p-0 text-sm font-medium">
+          <SidebarContent className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-0 text-sm font-medium">
             <SidebarGroup className="gap-3">
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -349,7 +331,7 @@ function AppShellContent({
               </SidebarGroup>
             ) : null}
             {displayednavObserveItems.length > 0 ? (
-              <SidebarGroup className="mt-auto gap-3">
+              <SidebarGroup className="gap-3">
                 <SidebarGroupLabel>
                   {dictionary.sidebarGroups.observe}
                 </SidebarGroupLabel>
@@ -378,7 +360,7 @@ function AppShellContent({
               </SidebarGroup>
             ) : null}
           </SidebarContent>
-          <SidebarFooter className="border border-border/60 bg-muted/40 p-4 text-xs text-muted-foreground">
+          <SidebarFooter className="mt-6 shrink-0 border border-border/60 bg-muted/40 p-4 text-xs text-muted-foreground">
             {dictionary.common.loggedInAs}{" "}
             <span className="font-medium text-foreground">{userName}</span>
             <br />
@@ -419,19 +401,6 @@ function AppShellContent({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            <LanguageToggle />
-            {socialLinks.map(({ href, label, icon: Icon }) => (
-              <Button key={href} variant="ghost" size="icon" asChild>
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                >
-                  <Icon className="h-4 w-4" />
-                </a>
-              </Button>
-            ))}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
@@ -470,7 +439,7 @@ function AppShellContent({
             style={{ transformOrigin: "bottom right" }}
           >
             <div className="flex items-center justify-between border-b border-border/80 bg-muted/40 px-3 py-2 text-sm font-medium">
-              <span>AVR Phone</span>
+              <span>{branding?.webrtcPhoneTitle || "AVR Phone"}</span>
               <Button
                 variant="ghost"
                 size="icon"

@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,6 +18,8 @@ import {
 
 @Injectable()
 export class ProvidersService {
+  private readonly logger = new Logger(ProvidersService.name);
+
   constructor(
     @InjectRepository(Provider)
     private readonly providerRepository: Repository<Provider>,
@@ -79,7 +82,14 @@ export class ProvidersService {
       provider.config = updateProviderDto.config;
     }
 
-    return this.providerRepository.save(provider);
+    const saved = await this.providerRepository.save(provider);
+    
+    // Log that provider config was updated - containers will pick up changes on next call
+    // STS containers fetch config dynamically from database on each new call (100ms cache)
+    // No container restart needed - changes apply immediately to new calls
+    this.logger.log(`Provider ${saved.name} (${saved.id}) configuration updated. Running agents will use new config on next call.`);
+    
+    return saved;
   }
 
   async remove(id: string): Promise<void> {

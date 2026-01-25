@@ -12,9 +12,24 @@ export class DockerService {
   private readonly logger = new Logger(DockerService.name);
 
   constructor() {
-    this.docker = new Dockerode({
-      socketPath: process.env.DOCKER_SOCKET_PATH || '/var/run/docker.sock',
-    });
+    // On Windows, dockerode automatically uses named pipe if socketPath is not provided
+    // On Linux/Mac, use /var/run/docker.sock
+    let dockerConfig: Dockerode.DockerOptions;
+    
+    if (process.env.DOCKER_SOCKET_PATH) {
+      dockerConfig = { socketPath: process.env.DOCKER_SOCKET_PATH };
+    } else if (process.platform === 'win32') {
+      // Windows: auto-detect named pipe
+      dockerConfig = {};
+    } else {
+      // Linux/Mac: explicitly use Unix socket
+      dockerConfig = { socketPath: '/var/run/docker.sock' };
+    }
+    
+    this.logger.log(`Initializing Docker client with config: ${JSON.stringify(dockerConfig)}`);
+    this.logger.log(`DOCKER_SOCKET_PATH env: ${process.env.DOCKER_SOCKET_PATH || 'not set'}`);
+    this.logger.log(`Platform: ${process.platform}`);
+    this.docker = new Dockerode(dockerConfig);
   }
 
   async runContainer(
@@ -23,23 +38,60 @@ export class DockerService {
     env: string[] = [],
     binds: string[] = [],
   ): Promise<string> {
-    await this.pullImage(image);
+    // Always check for local :local version first (for development/testing)
+    // If image is "image:tag" or "image", check for "image:local"
+    let imageToUse = image;
+    const localImage = image.includes(':') 
+      ? image.replace(/:[^:]+$/, ':local')  // Replace last tag with :local
+      : `${image}:local`;  // Add :local if no tag
+    
+    this.logger.debug(`Checking for local image: ${localImage} (original: ${image})`);
+    if (localImage !== image) {
+      try {
+        const localImg = this.docker.getImage(localImage);
+        await localImg.inspect();
+        imageToUse = localImage;
+        this.logger.log(`✅ Using local image ${localImage} instead of ${image}`);
+      } catch (error) {
+        // Local image doesn't exist, use original
+        this.logger.debug(`Local image ${localImage} not found (${error.message}), using ${image}`);
+        imageToUse = image;
+      }
+    }
+    
+    await this.pullImage(imageToUse);
     const existing = await this.findContainerByName(name);
     if (existing) {
       const container = this.docker.getContainer(existing.Id);
       const details = await container.inspect();
       if (!details.State.Running) {
-        await container.start();
-        this.logger.debug(`Started existing container ${name}`);
+        try {
+          await container.start();
+          this.logger.debug(`Started existing container ${name}`);
+          return existing.Id;
+        } catch (error: any) {
+          // If container fails to start (e.g., user mapping issue), remove and recreate
+          this.logger.warn(`Failed to start existing container ${name}, removing and recreating: ${error.message}`);
+          try {
+            await container.remove({ force: true });
+          } catch (removeError) {
+            this.logger.warn(`Failed to remove container ${name}: ${removeError}`);
+          }
+          // Continue to create new container below
+        }
+      } else {
+        return existing.Id;
       }
-      return existing.Id;
     }
 
     const container = await this.docker.createContainer({
       name,
-      Image: image,
+      Image: imageToUse,
       Env: env,
       Labels: this.getDefaultLabels(name),
+      // Override USER directive from Dockerfile to run as root
+      // This fixes "unable to find user node" errors on Windows Docker
+      User: 'root',
       NetworkingConfig: {
         EndpointsConfig: {
           avr: {},
@@ -47,7 +99,7 @@ export class DockerService {
       },
       HostConfig: {
         Binds: binds,
-      },
+      }
     });
     await container.start();
     this.logger.debug(`Created and started container ${name}`);
@@ -78,10 +130,31 @@ export class DockerService {
   }
 
   async listAllContainers(): Promise<Dockerode.ContainerInfo[]> {
-    return this.docker.listContainers({
-      all: true,
-      filters: { label: this.getDefaultLabelFilters() },
-    });
+    try {
+      // List all containers first, then filter in code if needed
+      // This avoids issues with Docker API filter format
+      const allContainers = await this.docker.listContainers({ all: true });
+      this.logger.debug(`Found ${allContainers.length} total containers`);
+      
+      // Filter by label if specified, otherwise return all
+      const labelFilters = this.getDefaultLabelFilters();
+      if (labelFilters.length > 0) {
+        const filtered = allContainers.filter((container) => {
+          const labels = container.Labels || {};
+          return labelFilters.some((filter) => {
+            const [key, value] = filter.split('=');
+            return labels[key] === value;
+          });
+        });
+        this.logger.debug(`Filtered to ${filtered.length} containers with labels: ${labelFilters.join(', ')}`);
+        return filtered;
+      }
+      
+      return allContainers;
+    } catch (error) {
+      this.logger.error(`Error listing containers: ${error.message}`, error.stack);
+      throw new InternalServerErrorException(`Failed to list containers: ${error.message}`);
+    }
   }
 
   async getContainerInspect(
@@ -241,15 +314,32 @@ export class DockerService {
   }
 
   private getDefaultLabelFilters(): string[] {
-    const filters = ['app=AVR'];
-    const tenant = process.env.TENANT;
-    if (tenant) {
-      filters.push(`tenant=${tenant}`);
-    }
-    return filters;
+    // Only filter by app=AVR to show all AVR containers
+    // Tenant filtering is optional and should not exclude containers without tenant label
+    return ['app=AVR'];
   }
 
   private async pullImage(image: string): Promise<void> {
+    // Skip pulling for local development images (tagged with :local)
+    if (image.endsWith(':local')) {
+      this.logger.debug(`Skipping pull for local image ${image}`);
+      return;
+    }
+    
+    // Check if local :local version exists and use it instead of pulling
+    const localImage = image.replace(/:latest$/, ':local').replace(/:$/, ':local');
+    if (localImage !== image) {
+      try {
+        const localImg = this.docker.getImage(localImage);
+        await localImg.inspect();
+        this.logger.debug(`Using local image ${localImage} instead of pulling ${image}`);
+        return; // Use local image, don't pull
+      } catch {
+        // Local image doesn't exist, continue to pull
+        this.logger.debug(`Local image ${localImage} not found, will pull ${image}`);
+      }
+    }
+    
     this.logger.debug(`Pulling image ${image}`);
     return new Promise((resolve, reject) => {
       this.docker.pull(image, (error, stream) => {

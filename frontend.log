@@ -1,0 +1,368 @@
+
+> avr-app-frontend@0.0.0 start:dev
+> next dev
+
+▲ Next.js 16.1.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.10:3000
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 1427ms
+ GET /login 200 in 1185ms (compile: 829ms, render: 355ms)
+ GET /overview 200 in 177ms (compile: 99ms, render: 78ms)
+ GET /overview 200 in 51ms (compile: 5ms, render: 47ms)
+ GET /agents 200 in 1399ms (compile: 1373ms, render: 26ms)
+ GET /providers 200 in 921ms (compile: 889ms, render: 31ms)
+ GET / 307 in 71ms (compile: 22ms, render: 48ms)
+ GET /recordings 200 in 512ms (compile: 476ms, render: 36ms)
+ GET /dockers 200 in 471ms (compile: 450ms, render: 20ms)
+ GET /calls 200 in 495ms (compile: 467ms, render: 28ms)
+ GET / 307 in 437ms (compile: 4ms, render: 433ms)
+ GET /overview 200 in 346ms (compile: 12ms, render: 333ms)
+ GET /login 200 in 51ms (compile: 7ms, render: 44ms)
+ GET /overview 200 in 67ms (compile: 7ms, render: 60ms)
+ GET /overview 200 in 30ms (compile: 5ms, render: 26ms)
+ GET /providers 200 in 65ms (compile: 18ms, render: 47ms)
+ GET /agents 200 in 38ms (compile: 9ms, render: 29ms)
+ GET /providers 200 in 25ms (compile: 9ms, render: 16ms)
+ GET /agents 200 in 24ms (compile: 5ms, render: 19ms)
+⨯ ./app/(protected)/numbers/page.tsx:42:1
+Module not found: Can't resolve '@/components/ui/switch'
+[0m [90m 40 |[39m } [36mfrom[39m [32m'@/components/ui/select'[39m[33m;[39m
+ [90m 41 |[39m [36mimport[39m { [33mSkeleton[39m } [36mfrom[39m [32m'@/components/ui/skeleton'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 42 |[39m [36mimport[39m { [33mSwitch[39m } [36mfrom[39m [32m'@/components/ui/switch'[39m[33m;[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 43 |[39m [36mimport[39m {
+ [90m 44 |[39m   [33mAlertDialog[39m[33m,[39m
+ [90m 45 |[39m   [33mAlertDialogAction[39m[33m,[39m[0m
+
+Import map: aliased to relative './components/ui/switch' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./app/(protected)/numbers/page.tsx [Client Component Browser]
+    ./app/(protected)/numbers/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/(protected)/numbers/page.tsx [Client Component SSR]
+    ./app/(protected)/numbers/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ GET /numbers 500 in 3.6s (compile: 3.4s, render: 161ms)
+⨯ ./app/(protected)/numbers/page.tsx:42:1
+Module not found: Can't resolve '@/components/ui/switch'
+[0m [90m 40 |[39m } [36mfrom[39m [32m'@/components/ui/select'[39m[33m;[39m
+ [90m 41 |[39m [36mimport[39m { [33mSkeleton[39m } [36mfrom[39m [32m'@/components/ui/skeleton'[39m[33m;[39m
+[31m[1m>[22m[39m[90m 42 |[39m [36mimport[39m { [33mSwitch[39m } [36mfrom[39m [32m'@/components/ui/switch'[39m[33m;[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 43 |[39m [36mimport[39m {
+ [90m 44 |[39m   [33mAlertDialog[39m[33m,[39m
+ [90m 45 |[39m   [33mAlertDialogAction[39m[33m,[39m[0m
+
+Import map: aliased to relative './components/ui/switch' inside of [project]/
+
+
+Import traces:
+  Client Component Browser:
+    ./app/(protected)/numbers/page.tsx [Client Component Browser]
+    ./app/(protected)/numbers/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/(protected)/numbers/page.tsx [Client Component SSR]
+    ./app/(protected)/numbers/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ GET /numbers 500 in 63ms (compile: 51ms, render: 13ms)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 1281ms
+ GET /agents 200 in 1040ms (compile: 30ms, render: 1010ms)
+ GET /numbers 200 in 1068ms (compile: 180ms, render: 888ms)
+ GET /numbers 200 in 100ms (compile: 6ms, render: 94ms)
+ GET /phones 200 in 583ms (compile: 545ms, render: 38ms)
+ GET /trunks 200 in 528ms (compile: 501ms, render: 27ms)
+ GET /phones 200 in 25ms (compile: 4ms, render: 21ms)
+ GET /phones 200 in 45ms (compile: 9ms, render: 37ms)
+ GET /phones 200 in 136ms (compile: 10ms, render: 127ms)
+ GET /phones 200 in 62ms (compile: 5ms, render: 57ms)
+ GET /phones 200 in 120ms (compile: 5ms, render: 114ms)
+ GET /phones 200 in 80ms (compile: 5ms, render: 74ms)
+ GET /agents 200 in 152ms (compile: 12ms, render: 140ms)
+ GET /agents 200 in 81ms (compile: 10ms, render: 71ms)
+ GET /agents 200 in 59ms (compile: 3ms, render: 57ms)
+ GET /agents 200 in 60ms (compile: 5ms, render: 55ms)
+ GET /agents 200 in 61ms (compile: 5ms, render: 56ms)
+ GET /login 200 in 54ms (compile: 10ms, render: 44ms)
+ GET /overview 200 in 59ms (compile: 6ms, render: 52ms)
+ GET /overview 200 in 32ms (compile: 3ms, render: 28ms)
+ GET /dockers 200 in 27ms (compile: 9ms, render: 18ms)
+ GET /dockers 200 in 129ms (compile: 44ms, render: 85ms)
+ GET /dockers 200 in 132ms (compile: 28ms, render: 105ms)
+ GET /login 200 in 75ms (compile: 23ms, render: 51ms)
+ GET /overview 200 in 148ms (compile: 34ms, render: 115ms)
+ GET /overview 200 in 56ms (compile: 12ms, render: 45ms)
+ GET /dockers 200 in 109ms (compile: 55ms, render: 54ms)
+ GET /agents 200 in 53ms (compile: 36ms, render: 17ms)
+ GET /dockers 200 in 21ms (compile: 5ms, render: 16ms)
+ GET /agents 200 in 25ms (compile: 5ms, render: 20ms)
+ GET /dockers 200 in 23ms (compile: 8ms, render: 15ms)
+ GET /recordings 200 in 59ms (compile: 25ms, render: 34ms)
+ GET /calls 200 in 190ms (compile: 33ms, render: 157ms)
+ GET /dockers 200 in 22ms (compile: 5ms, render: 17ms)
+ GET /dockers 200 in 80ms (compile: 9ms, render: 71ms)
+ GET /agents 200 in 62ms (compile: 25ms, render: 37ms)
+ GET /dockers 200 in 33ms (compile: 6ms, render: 27ms)
+ GET /agents 200 in 21ms (compile: 5ms, render: 16ms)
+ GET /agents 200 in 61ms (compile: 4ms, render: 57ms)
+ GET /dockers 200 in 21ms (compile: 4ms, render: 16ms)
+ GET /agents 200 in 18ms (compile: 4ms, render: 14ms)
+ GET /dockers 200 in 19ms (compile: 4ms, render: 15ms)
+ GET /dockers 200 in 20ms (compile: 4ms, render: 16ms)
+ GET /recordings 200 in 24ms (compile: 10ms, render: 14ms)
+ GET /dockers 200 in 18ms (compile: 4ms, render: 14ms)
+ GET /dockers 200 in 60ms (compile: 3ms, render: 57ms)
+ GET /providers 200 in 35ms (compile: 17ms, render: 18ms)
+ GET /agents 200 in 22ms (compile: 4ms, render: 18ms)
+ GET /phones 200 in 32ms (compile: 8ms, render: 24ms)
+ GET /users 200 in 1309ms (compile: 1288ms, render: 20ms)
+ GET /calls 200 in 104ms (compile: 6ms, render: 98ms)
+ GET /dockers 200 in 23ms (compile: 7ms, render: 16ms)
+ GET /recordings 200 in 18ms (compile: 5ms, render: 13ms)
+ GET /dockers 200 in 21ms (compile: 6ms, render: 15ms)
+ GET /dockers 200 in 69ms (compile: 6ms, render: 64ms)
+ GET /dockers 200 in 63ms (compile: 4ms, render: 59ms)
+ GET /providers 200 in 107ms (compile: 55ms, render: 52ms)
+ GET /numbers 200 in 75ms (compile: 40ms, render: 36ms)
+ GET /agents 200 in 26ms (compile: 10ms, render: 16ms)
+ GET /agents 200 in 75ms (compile: 5ms, render: 69ms)
+ GET /dockers 200 in 77ms (compile: 41ms, render: 37ms)
+ GET /dockers 200 in 139ms (compile: 46ms, render: 92ms)
+ GET /providers 200 in 93ms (compile: 52ms, render: 41ms)
+ GET /agents 200 in 70ms (compile: 41ms, render: 29ms)
+ GET /dockers 200 in 28ms (compile: 12ms, render: 16ms)
+ GET /calls 200 in 25ms (compile: 9ms, render: 17ms)
+ GET /agents 200 in 21ms (compile: 4ms, render: 17ms)
+ GET /dockers 200 in 23ms (compile: 9ms, render: 15ms)
+ GET /providers 200 in 159ms (compile: 72ms, render: 87ms)
+ GET /providers 200 in 266ms (compile: 8ms, render: 258ms)
+ GET /login 200 in 44ms (compile: 13ms, render: 31ms)
+ GET /overview 200 in 66ms (compile: 10ms, render: 56ms)
+ GET /overview 200 in 30ms (compile: 4ms, render: 26ms)
+ GET /providers 200 in 21ms (compile: 8ms, render: 13ms)
+ GET /dockers 200 in 48ms (compile: 28ms, render: 20ms)
+ GET /dockers 200 in 129ms (compile: 59ms, render: 70ms)
+ GET /agents 200 in 25ms (compile: 7ms, render: 18ms)
+ GET /dockers 200 in 33ms (compile: 15ms, render: 19ms)
+ GET /agents 200 in 54ms (compile: 37ms, render: 17ms)
+ GET /providers 200 in 23ms (compile: 6ms, render: 18ms)
+ GET /agents 200 in 21ms (compile: 5ms, render: 16ms)
+ GET /dockers 200 in 29ms (compile: 11ms, render: 18ms)
+ GET /agents 200 in 105ms (compile: 49ms, render: 56ms)
+ GET /dockers 200 in 24ms (compile: 8ms, render: 16ms)
+ GET /agents 200 in 25ms (compile: 8ms, render: 17ms)
+ GET /dockers 200 in 30ms (compile: 12ms, render: 18ms)
+ GET /providers 200 in 42ms (compile: 14ms, render: 27ms)
+ GET /dockers 200 in 31ms (compile: 11ms, render: 20ms)
+ GET /providers 200 in 24ms (compile: 7ms, render: 17ms)
+ GET /dockers 200 in 24ms (compile: 7ms, render: 17ms)
+ GET /agents 200 in 28ms (compile: 5ms, render: 23ms)
+ GET /providers 200 in 29ms (compile: 12ms, render: 17ms)
+ GET /agents 200 in 21ms (compile: 7ms, render: 14ms)
+ GET /dockers 200 in 22ms (compile: 7ms, render: 15ms)
+ GET /agents 200 in 26ms (compile: 10ms, render: 16ms)
+ GET /dockers 200 in 27ms (compile: 11ms, render: 17ms)
+ GET /providers 200 in 60ms (compile: 41ms, render: 19ms)
+ GET /agents 200 in 84ms (compile: 42ms, render: 42ms)
+ GET /dockers 200 in 73ms (compile: 37ms, render: 36ms)
+ GET /providers 200 in 103ms (compile: 44ms, render: 59ms)
+ GET /dockers 200 in 90ms (compile: 48ms, render: 42ms)
+ GET /providers 200 in 102ms (compile: 54ms, render: 48ms)
+ GET /providers 200 in 263ms (compile: 149ms, render: 113ms)
+ GET /agents 200 in 437ms (compile: 245ms, render: 192ms)
+ GET /agents 200 in 366ms (compile: 164ms, render: 202ms)
+ GET /dockers 200 in 286ms (compile: 164ms, render: 122ms)
+ GET /agents 200 in 102ms (compile: 70ms, render: 32ms)
+ GET /dockers 200 in 21.9s (compile: 3.0s, render: 18.9s)
+ GET /dockers 200 in 12.3s (compile: 4.1s, render: 8.1s)
+ GET /dockers 200 in 4.5s (compile: 517ms, render: 4.0s)
+ GET /dockers 200 in 284ms (compile: 75ms, render: 209ms)
+ GET /agents 200 in 102ms (compile: 63ms, render: 39ms)
+ GET /providers 200 in 29ms (compile: 7ms, render: 22ms)
+ GET /agents 200 in 42ms (compile: 26ms, render: 17ms)
+ GET /providers 200 in 24ms (compile: 8ms, render: 16ms)
+ GET /agents 200 in 20ms (compile: 4ms, render: 17ms)
+ GET /providers 200 in 20ms (compile: 3ms, render: 17ms)
+ GET /agents 200 in 24ms (compile: 8ms, render: 16ms)
+ GET /dockers 200 in 24ms (compile: 7ms, render: 17ms)
+ GET /calls 200 in 35ms (compile: 14ms, render: 21ms)
+ GET /dockers 200 in 19ms (compile: 3ms, render: 16ms)
+ GET /providers 200 in 22ms (compile: 6ms, render: 17ms)
+ GET /dockers 200 in 26ms (compile: 10ms, render: 16ms)
+ GET /agents 200 in 18ms (compile: 3ms, render: 15ms)
+ GET /providers 200 in 20ms (compile: 4ms, render: 17ms)
+ GET /agents 200 in 18ms (compile: 3ms, render: 15ms)
+ GET /providers 200 in 20ms (compile: 5ms, render: 15ms)
+ GET /agents 200 in 18ms (compile: 3ms, render: 15ms)
+ GET /dockers 200 in 23ms (compile: 9ms, render: 14ms)
+ GET /providers 200 in 25ms (compile: 9ms, render: 16ms)
+ GET /agents 200 in 38ms (compile: 21ms, render: 17ms)
+ GET /providers 200 in 39ms (compile: 9ms, render: 31ms)
+ GET /agents 200 in 28ms (compile: 12ms, render: 16ms)
+ GET /agents 200 in 64ms (compile: 3ms, render: 61ms)
+ GET /providers 200 in 23ms (compile: 8ms, render: 15ms)
+ GET /agents 200 in 22ms (compile: 4ms, render: 18ms)
+ GET /dockers 200 in 22ms (compile: 9ms, render: 13ms)
+ GET /providers 200 in 32ms (compile: 12ms, render: 19ms)
+ GET /providers 200 in 58ms (compile: 3ms, render: 55ms)
+ GET /login 200 in 38ms (compile: 10ms, render: 29ms)
+ GET /overview 200 in 150ms (compile: 7ms, render: 143ms)
+ GET /overview 200 in 42ms (compile: 5ms, render: 37ms)
+ GET /providers 200 in 20ms (compile: 6ms, render: 14ms)
+ GET /numbers 200 in 36ms (compile: 9ms, render: 27ms)
+ GET /recordings 200 in 30ms (compile: 12ms, render: 18ms)
+ GET /recordings 200 in 106ms (compile: 38ms, render: 68ms)
+ GET /phones 200 in 42ms (compile: 18ms, render: 23ms)
+ GET /phones 200 in 83ms (compile: 9ms, render: 75ms)
+ GET /numbers 200 in 24ms (compile: 5ms, render: 19ms)
+ GET /providers 200 in 20ms (compile: 5ms, render: 16ms)
+ GET /agents 200 in 23ms (compile: 6ms, render: 17ms)
+ GET /agents 200 in 64ms (compile: 5ms, render: 59ms)
+ GET /overview 200 in 22ms (compile: 7ms, render: 15ms)
+ GET /providers 200 in 20ms (compile: 6ms, render: 14ms)
+ GET /providers 200 in 75ms (compile: 14ms, render: 61ms)
+ GET /agents 200 in 19ms (compile: 4ms, render: 15ms)
+ GET /users 200 in 31ms (compile: 13ms, render: 18ms)
+ GET /phones 200 in 28ms (compile: 13ms, render: 15ms)
+ GET /trunks 200 in 34ms (compile: 7ms, render: 27ms)
+ GET /providers 200 in 21ms (compile: 7ms, render: 14ms)
+ GET /agents 200 in 18ms (compile: 3ms, render: 15ms)
+ GET /agents 200 in 56ms (compile: 4ms, render: 53ms)
+ GET /overview 200 in 26ms (compile: 9ms, render: 16ms)
+ GET /overview 200 in 60ms (compile: 4ms, render: 56ms)
+ GET /phones 200 in 25ms (compile: 7ms, render: 18ms)
+ GET /providers 200 in 23ms (compile: 7ms, render: 16ms)
+ GET /agents 200 in 26ms (compile: 11ms, render: 15ms)
+ GET /providers 200 in 23ms (compile: 8ms, render: 15ms)
+ GET /overview 200 in 23ms (compile: 8ms, render: 15ms)
+ GET /providers 200 in 24ms (compile: 10ms, render: 15ms)
+ GET /providers 200 in 71ms (compile: 11ms, render: 60ms)
+ GET /phones 200 in 37ms (compile: 13ms, render: 24ms)
+ GET /trunks 200 in 28ms (compile: 11ms, render: 17ms)
+ GET /phones 200 in 23ms (compile: 8ms, render: 15ms)
+ GET /overview 200 in 20ms (compile: 5ms, render: 15ms)
+ GET /overview 200 in 52ms (compile: 15ms, render: 36ms)
+ GET /providers 200 in 18ms (compile: 4ms, render: 14ms)
+ GET /agents 200 in 24ms (compile: 9ms, render: 15ms)
+ GET /providers 200 in 18ms (compile: 3ms, render: 15ms)
+ GET /providers 200 in 98ms (compile: 4ms, render: 94ms)
+ GET /agents 200 in 24ms (compile: 8ms, render: 16ms)
+ GET /providers 200 in 25ms (compile: 8ms, render: 17ms)
+ GET /providers 200 in 83ms (compile: 4ms, render: 78ms)
+ GET /agents 200 in 27ms (compile: 11ms, render: 15ms)
+ GET /overview 200 in 17ms (compile: 4ms, render: 13ms)
+ GET /overview 200 in 66ms (compile: 5ms, render: 61ms)
+ GET /phones 200 in 23ms (compile: 8ms, render: 15ms)
+ GET /trunks 200 in 23ms (compile: 6ms, render: 17ms)
+ GET /phones 200 in 17ms (compile: 3ms, render: 14ms)
+ GET /numbers 200 in 28ms (compile: 10ms, render: 19ms)
+ GET /recordings 200 in 25ms (compile: 8ms, render: 17ms)
+ GET /calls 200 in 27ms (compile: 11ms, render: 16ms)
+ GET /recordings 200 in 17ms (compile: 3ms, render: 14ms)
+ GET /numbers 200 in 18ms (compile: 3ms, render: 15ms)
+ GET /recordings 200 in 19ms (compile: 3ms, render: 16ms)
+ GET /agents 200 in 21ms (compile: 7ms, render: 14ms)
+✓ Compiled in 286ms
+✓ Compiled in 859ms
+ GET /agents 200 in 512ms (compile: 148ms, render: 364ms)
+ GET /dockers 200 in 52ms (compile: 31ms, render: 20ms)
+ GET /agents 200 in 24ms (compile: 6ms, render: 18ms)
+ GET /providers 200 in 29ms (compile: 12ms, render: 17ms)
+ GET /agents 200 in 20ms (compile: 3ms, render: 17ms)
+ GET /recordings 200 in 90ms (compile: 62ms, render: 28ms)
+ GET /recordings 200 in 89ms (compile: 12ms, render: 77ms)
+ GET /providers 200 in 25ms (compile: 8ms, render: 17ms)
+ GET /agents 200 in 100ms (compile: 57ms, render: 43ms)
+ GET /providers 200 in 81ms (compile: 43ms, render: 38ms)
+ GET /agents 200 in 99ms (compile: 57ms, render: 42ms)
+ GET /numbers 200 in 147ms (compile: 92ms, render: 55ms)
+ GET /agents 200 in 59ms (compile: 27ms, render: 32ms)
+ GET /providers 200 in 60ms (compile: 42ms, render: 18ms)
+ GET /providers 200 in 89ms (compile: 5ms, render: 84ms)
+ GET /login 200 in 155ms (compile: 88ms, render: 68ms)
+ GET /overview 200 in 121ms (compile: 56ms, render: 66ms)
+ GET /overview 200 in 32ms (compile: 4ms, render: 28ms)
+ GET /agents 200 in 116ms (compile: 60ms, render: 56ms)
+✓ Compiled in 699ms
+ GET /numbers 200 in 127ms (compile: 71ms, render: 56ms)
+ GET /numbers 200 in 458ms (compile: 200ms, render: 257ms)
+✓ Compiled in 2.2s
+⚠ Fast Refresh had to perform a full reload when ./lib/api.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /numbers 200 in 1200ms (compile: 401ms, render: 799ms)
+✓ Compiled in 1073ms
+⚠ Fast Refresh had to perform a full reload when ./lib/auth.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /numbers 200 in 3.0s (compile: 671ms, render: 2.4s)
+✓ Finished filesystem cache database compaction in 21.9s
+ GET /agents 200 in 500ms (compile: 410ms, render: 89ms)
+ GET /dockers 200 in 475ms (compile: 336ms, render: 139ms)
+ GET /providers 200 in 287ms (compile: 236ms, render: 51ms)
+ GET /numbers 200 in 103ms (compile: 53ms, render: 51ms)
+ GET /dockers 200 in 46ms (compile: 16ms, render: 30ms)
+✓ Compiled in 641ms
+ GET /dockers 200 in 576ms (compile: 356ms, render: 220ms)
+ GET /dockers 200 in 252ms (compile: 61ms, render: 191ms)
+ GET /dockers 200 in 240ms (compile: 5ms, render: 235ms)
+ GET /dockers 200 in 281ms (compile: 10ms, render: 271ms)
+ GET /dockers 200 in 229ms (compile: 9ms, render: 220ms)
+ GET /dockers 200 in 280ms (compile: 10ms, render: 270ms)
+ GET /dockers 200 in 247ms (compile: 9ms, render: 238ms)
+ GET /dockers 200 in 236ms (compile: 11ms, render: 225ms)
+ GET /dockers 200 in 167ms (compile: 22ms, render: 145ms)
+ GET /dockers 200 in 100ms (compile: 5ms, render: 95ms)
+ GET /dockers 200 in 74ms (compile: 4ms, render: 70ms)
+ GET /dockers 200 in 43ms (compile: 5ms, render: 38ms)
+✓ Compiled in 18.9s
+✓ Finished writing to filesystem cache in 103s
+ GET /dockers 200 in 112s (compile: 5.5s, render: 107s)
+ GET /dockers 200 in 103s (compile: 937ms, render: 102s)
+ GET /dockers 200 in 10.3s (compile: 2.6s, render: 7.7s)
+ GET /dockers 200 in 9.0s (compile: 2.7s, render: 6.3s)
+ GET /dockers 200 in 6.4s (compile: 5.9s, render: 494ms)
+ GET /dockers 200 in 5.2s (compile: 1818ms, render: 3.4s)
+ GET /dockers 200 in 4.7s (compile: 3.9s, render: 765ms)
+ GET /dockers 200 in 369ms (compile: 225ms, render: 144ms)
+ GET /dockers 200 in 1909ms (compile: 19ms, render: 1890ms)
+ GET /dockers 200 in 1987ms (compile: 182ms, render: 1805ms)
+ GET /dockers 200 in 805ms (compile: 173ms, render: 632ms)
+ GET /dockers 200 in 811ms (compile: 371ms, render: 440ms)
+ GET /dockers 200 in 1362ms (compile: 275ms, render: 1087ms)
+✓ Compiled in 1730ms
+✓ Compiled in 4.8s
+✓ Compiled in 20.1s
+✓ Finished filesystem cache database compaction in 15.5s
+✓ Compiled in 2.2s
+⚠ Fast Refresh had to perform a full reload when ./lib/i18n/en.ts changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /dockers 200 in 23.2s (compile: 19.2s, render: 3.9s)
+✓ Finished writing to filesystem cache in 25.1s
+✓ Finished filesystem cache database compaction in 52s
+ GET / 307 in 664ms (compile: 341ms, render: 323ms)
+ GET /overview 200 in 714ms (compile: 134ms, render: 579ms)
+ GET /login 200 in 797ms (compile: 736ms, render: 61ms)
+ GET /overview 200 in 63ms (compile: 3ms, render: 60ms)
+ GET /overview 200 in 29ms (compile: 3ms, render: 26ms)
+ GET /settings 200 in 1159ms (compile: 1126ms, render: 33ms)
+ GET /settings 200 in 16ms (compile: 3ms, render: 13ms)
+⚠ Found a change in next.config.ts. Restarting the server to apply the changes...
+▲ Next.js 16.1.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.13:3000
+- Environments: .env.local
+
+✓ Starting...
+✓ Ready in 1702ms
+ GET /settings 200 in 2.4s (compile: 1909ms, render: 460ms)
+[?25h

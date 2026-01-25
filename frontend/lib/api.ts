@@ -55,6 +55,11 @@ export async function apiFetch<T>(endpoint: string, init: ApiFetchOptions = {}):
 
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
+  } else {
+    // If no token and we're making an authenticated request, throw error immediately
+    if (typeof window !== 'undefined') {
+      throw new ApiError('No authentication token found. Please log in again.', 401);
+    }
   }
 
   const url = new URL(`${API_URL}${endpoint}`);
@@ -75,7 +80,17 @@ export async function apiFetch<T>(endpoint: string, init: ApiFetchOptions = {}):
 
   if (!response.ok) {
     const message = await extractErrorMessage(response);
-    throw new ApiError(message, response.status);
+    const error = new ApiError(message, response.status);
+    
+    // Handle 401 Unauthorized - token expired or invalid
+    if (response.status === 401 && typeof window !== 'undefined') {
+      // Clear invalid token
+      setStoredToken(null);
+      // Optionally trigger a custom event for auth providers to handle
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    }
+    
+    throw error;
   }
 
   if (response.status === 204) {

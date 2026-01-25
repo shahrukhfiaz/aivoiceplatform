@@ -11,12 +11,28 @@ export class AsteriskService {
   private readonly logger = new Logger(AsteriskService.name);
   private ari: Client | null = null;
   private ariPromise: Promise<Client> | null = null;
-  private readonly basePath =
-    process.env.ASTERISK_CONFIG_PATH || '/app/asterisk';
-  private readonly extensionsPath = path.join(this.basePath, 'extensions.conf');
-  private readonly pjsipPath = path.join(this.basePath, 'pjsip.conf');
-  private readonly managerPath = path.join(this.basePath, 'manager.conf');
-  private readonly trunksPath = path.join(this.basePath, 'pjsip.conf');
+  private readonly basePath: string;
+  private readonly extensionsPath: string;
+  private readonly pjsipPath: string;
+  private readonly managerPath: string;
+  private readonly trunksPath: string;
+
+  constructor() {
+    const envPath = process.env.ASTERISK_CONFIG_PATH || '/app/asterisk';
+    // Resolve relative paths relative to backend directory
+    if (!path.isAbsolute(envPath)) {
+      const backendDir = path.join(__dirname, '../..');
+      this.basePath = path.resolve(backendDir, envPath);
+      this.logger.debug(`Resolved ASTERISK_CONFIG_PATH: ${envPath} -> ${this.basePath}`);
+    } else {
+      this.basePath = envPath;
+    }
+    this.extensionsPath = path.join(this.basePath, 'extensions.conf');
+    this.pjsipPath = path.join(this.basePath, 'pjsip.conf');
+    this.managerPath = path.join(this.basePath, 'manager.conf');
+    this.trunksPath = path.join(this.basePath, 'pjsip.conf');
+    this.logger.log(`Asterisk config path: ${this.basePath}`);
+  }
 
   private async getAri(): Promise<Client> {
     if (this.ari) {
@@ -52,6 +68,12 @@ export class AsteriskService {
       this.logger.error(
         `Unable to reload module ${moduleName}`,
         error as Error,
+      );
+      // Don't throw - allow phone creation to succeed even if module reload fails
+      // The config file is still updated, and Asterisk will pick it up on next reload
+      this.logger.warn(
+        `Phone provisioning completed but module reload failed. ` +
+        `Config file updated. Asterisk will need manual reload or restart.`,
       );
     }
   }
@@ -103,23 +125,32 @@ export class AsteriskService {
     identifier: string,
     block: string,
   ) {
-    await this.ensureFile(filePath);
-    const content = await fs.readFile(filePath, 'utf8');
-    const [beginMarker, endMarker] = this.getMarkers(identifier);
-    const blockWithMarkers = `${beginMarker}\n${block}\n${endMarker}\n`;
-    const regex = new RegExp(
-      `${this.escapeRegex(beginMarker)}[\\s\\S]*?${this.escapeRegex(endMarker)}(?:\\r?\\n|$)`,
-      'g',
-    );
-    let nextContent: string;
-    if (regex.test(content)) {
-      nextContent = content.replace(regex, blockWithMarkers);
-    } else {
-      const separator =
-        content.length === 0 || content.endsWith('\n') ? '' : '\n';
-      nextContent = `${content}${separator}${blockWithMarkers}`;
+    try {
+      await this.ensureFile(filePath);
+      const content = await fs.readFile(filePath, 'utf8');
+      const [beginMarker, endMarker] = this.getMarkers(identifier);
+      const blockWithMarkers = `${beginMarker}\n${block}\n${endMarker}\n`;
+      const regex = new RegExp(
+        `${this.escapeRegex(beginMarker)}[\\s\\S]*?${this.escapeRegex(endMarker)}(?:\\r?\\n|$)`,
+        'g',
+      );
+      let nextContent: string;
+      if (regex.test(content)) {
+        nextContent = content.replace(regex, blockWithMarkers);
+      } else {
+        const separator =
+          content.length === 0 || content.endsWith('\n') ? '' : '\n';
+        nextContent = `${content}${separator}${blockWithMarkers}`;
+      }
+      await fs.writeFile(filePath, nextContent);
+      this.logger.debug(`Updated Asterisk config file: ${filePath} (block: ${identifier})`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to upsert block in ${filePath} for ${identifier}`,
+        error as Error,
+      );
+      throw error;
     }
-    await fs.writeFile(filePath, nextContent);
   }
 
   private async removeBlock(filePath: string, identifier: string) {
@@ -145,11 +176,23 @@ export class AsteriskService {
   }
 
   private async ensureFile(filePath: string) {
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
     try {
-      await fs.access(filePath);
-    } catch {
-      await fs.writeFile(filePath, '');
+      await fs.mkdir(path.dirname(filePath), { recursive: true });
+      try {
+        await fs.access(filePath);
+      } catch {
+        await fs.writeFile(filePath, '');
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to ensure file exists: ${filePath}`,
+        error as Error,
+      );
+      throw new Error(
+        `Cannot access Asterisk config directory: ${path.dirname(filePath)}. ` +
+        `Please ensure ASTERISK_CONFIG_PATH is set correctly and the directory is writable. ` +
+        `Error: ${(error as Error).message}`,
+      );
     }
   }
 
@@ -202,18 +245,27 @@ export class AsteriskService {
           ' same => n,Wait(1)',
           ' same => n,Set(AVR_NUMBER=${CALLERID(num)})',
           " same => n,Set(UUID=${SHELL(uuidgen | tr -d '\\n')})",
-          " same => n,Set(JSON_BODY={\"uuid\":\"${UUID}\",\"payload\":{\"from\":\"${CALLERID(num)}\",\"to\":\"${EXTEN}\",\"uniqueid\":\"${UNIQUEID}\",\"channel\":\"${CHANNEL}\",\"recording\": " + recordingEnabled + "}})",
+          // Capture VICIdial SIP headers if present
+          ' same => n,Set(VICIDIAL_LEAD_ID=${PJSIP_HEADER(read,X-VICIdial-Lead-Id)})',
+          ' same => n,Set(VICIDIAL_CAMPAIGN_ID=${PJSIP_HEADER(read,X-VICIdial-Campaign-Id)})',
+          ' same => n,Set(VICIDIAL_PHONE=${PJSIP_HEADER(read,X-VICIdial-Phone-Number)})',
+          ' same => n,Set(VICIDIAL_USER=${PJSIP_HEADER(read,X-VICIdial-User-Id)})',
+          ' same => n,Set(VICIDIAL_LIST_ID=${PJSIP_HEADER(read,X-VICIdial-List-Id)})',
+          // Build JSON body with VICIdial data included
+          " same => n,Set(JSON_BODY={\"uuid\":\"${UUID}\",\"payload\":{\"from\":\"${CALLERID(num)}\",\"to\":\"${EXTEN}\",\"uniqueid\":\"${UNIQUEID}\",\"channel\":\"${CHANNEL}\",\"recording\":" + recordingEnabled + ",\"vicidial\":{\"leadId\":\"${VICIDIAL_LEAD_ID}\",\"campaignId\":\"${VICIDIAL_CAMPAIGN_ID}\",\"phone\":\"${VICIDIAL_PHONE}\",\"userId\":\"${VICIDIAL_USER}\",\"listId\":\"${VICIDIAL_LIST_ID}\"}}})",
           " same => n,Set(CURLOPT(httpheader)=Content-Type: application/json)",
           " same => n,Set(JSON_RESPONSE=${CURL(http://avr-core-" + agent.id + ":" + agent.httpPort + "/call,${JSON_BODY})})",
           " same => n,NoOp(JSON_BODY: ${JSON_BODY})",
           " same => n,NoOp(JSON_RESPONSE: ${JSON_RESPONSE})",
+          " same => n,GotoIf($[\"${JSON_RESPONSE}\" = \"\"]?skip_http)",
+          " same => n(skip_http),NoOp(HTTP call completed or skipped)",
         ];
         if (recordingEnabled) {
           lines.push(' same => n,MixMonitor(/var/spool/asterisk/monitor/' + tenant+ '/${UUID}.wav)');
         }
         if (denoiseEnabled) {
           lines.push(' same => n,Set(DENOISE(rx)=on)');
-        } 
+        }
         lines.push(
           ' same => n,Dial(AudioSocket/avr-core-' +
             agent.id +

@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -87,7 +88,6 @@ interface TrunkDto {
 
 const APPLICATIONS = ['agent', 'internal', 'transfer'] as const;
 type ApplicationValue = (typeof APPLICATIONS)[number];
-type ToggleValue = 'on' | 'off';
 
 const optionalId = (message: string) =>
   z
@@ -108,8 +108,8 @@ const makeNumberSchema = (dict: Dictionary) =>
       agentId: optionalId(dict.numbers.validation.agentRequired).optional(),
       phoneId: optionalId(dict.numbers.validation.phoneRequired).optional(),
       trunkId: optionalId(dict.numbers.validation.trunkRequired).optional(),
-      denoiseEnabled: z.enum(['on', 'off']).optional(),
-      recordingEnabled: z.enum(['on', 'off']).optional(),
+      denoiseEnabled: z.boolean().optional(),
+      recordingEnabled: z.boolean().optional(),
     })
     .superRefine((val, ctx) => {
       if (val.application === 'agent' && !val.agentId) {
@@ -189,8 +189,8 @@ export default function NumbersPage() {
       agentId: '',
       phoneId: '',
       trunkId: '',
-      denoiseEnabled: 'on',
-      recordingEnabled: 'off',
+      denoiseEnabled: true,
+      recordingEnabled: false,
     },
   });
 
@@ -202,8 +202,8 @@ export default function NumbersPage() {
       agentId: '',
       phoneId: '',
       trunkId: '',
-      denoiseEnabled: 'on',
-      recordingEnabled: 'off',
+      denoiseEnabled: true,
+      recordingEnabled: false,
     },
   });
 
@@ -296,8 +296,8 @@ export default function NumbersPage() {
       agentId: number.agent?.id ?? '',
       phoneId: number.phone?.id ?? '',
       trunkId: number.trunk?.id ?? '',
-      denoiseEnabled: number.denoiseEnabled === false ? 'off' : 'on',
-      recordingEnabled: number.recordingEnabled ? 'on' : 'off',
+      denoiseEnabled: number.denoiseEnabled !== false,
+      recordingEnabled: number.recordingEnabled === true,
     });
     setEditDialogOpen(true);
   };
@@ -306,8 +306,8 @@ export default function NumbersPage() {
     setSubmitting(true);
     try {
       const isAgent = values.application === 'agent';
-      const denoiseEnabled = isAgent ? values.denoiseEnabled === 'on' : undefined;
-      const recordingEnabled = isAgent ? values.recordingEnabled === 'on' : undefined;
+      const denoiseEnabled = isAgent ? values.denoiseEnabled : undefined;
+      const recordingEnabled = isAgent ? values.recordingEnabled : undefined;
       await apiFetch<NumberDto>('/numbers', {
         method: 'POST',
         body: JSON.stringify({
@@ -327,8 +327,8 @@ export default function NumbersPage() {
         agentId: '',
         phoneId: '',
         trunkId: '',
-        denoiseEnabled: 'on',
-        recordingEnabled: 'off',
+        denoiseEnabled: true,
+        recordingEnabled: false,
       });
       await loadNumbers();
     } catch (err) {
@@ -363,8 +363,8 @@ export default function NumbersPage() {
     setUpdating(true);
     try {
       const isAgent = values.application === 'agent';
-      const denoiseEnabled = isAgent ? values.denoiseEnabled === 'on' : undefined;
-      const recordingEnabled = isAgent ? values.recordingEnabled === 'on' : undefined;
+      const denoiseEnabled = isAgent ? values.denoiseEnabled : undefined;
+      const recordingEnabled = isAgent ? values.recordingEnabled : undefined;
       await apiFetch<NumberDto>(`/numbers/${editingNumber.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
@@ -385,8 +385,8 @@ export default function NumbersPage() {
         agentId: '',
         phoneId: '',
         trunkId: '',
-        denoiseEnabled: 'on',
-        recordingEnabled: 'off',
+        denoiseEnabled: true,
+        recordingEnabled: false,
       });
       await loadNumbers();
     } catch (err) {
@@ -448,13 +448,6 @@ export default function NumbersPage() {
         label: dictionary.numbers.applicationOptions[value],
       })),
     [dictionary.numbers.applicationOptions],
-  );
-  const toggleOptions = useMemo(
-    () => [
-      { value: 'on', label: dictionary.numbers.toggleOptions.on },
-      { value: 'off', label: dictionary.numbers.toggleOptions.off },
-    ],
-    [dictionary.numbers.toggleOptions],
   );
 
   const selectedCreateApplication = form.watch('application');
@@ -600,23 +593,19 @@ export default function NumbersPage() {
                       control={form.control}
                       name="denoiseEnabled"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{dictionary.numbers.fields.denoise}</FormLabel>
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">{dictionary.numbers.fields.denoise}</FormLabel>
+                            <div className="text-sm text-muted-foreground">
+                              {dictionary.numbers.fields.denoiseDescription || 'Enable noise reduction for better audio quality'}
+                            </div>
+                          </div>
                           <FormControl>
-                            <Select onValueChange={field.onChange} value={field.value as ToggleValue}>
-                              <SelectTrigger>
-                                <SelectValue placeholder={dictionary.common.none} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {toggleOptions.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
                           </FormControl>
-                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -626,23 +615,19 @@ export default function NumbersPage() {
                       control={form.control}
                       name="recordingEnabled"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{dictionary.numbers.fields.recording}</FormLabel>
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">{dictionary.numbers.fields.recording}</FormLabel>
+                            <div className="text-sm text-muted-foreground">
+                              {dictionary.numbers.fields.recordingDescription || 'Record all calls to this number'}
+                            </div>
+                          </div>
                           <FormControl>
-                            <Select onValueChange={field.onChange} value={field.value as ToggleValue}>
-                              <SelectTrigger>
-                                <SelectValue placeholder={dictionary.common.none} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {toggleOptions.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
                           </FormControl>
-                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -875,23 +860,19 @@ export default function NumbersPage() {
                   control={editForm.control}
                   name="denoiseEnabled"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{dictionary.numbers.fields.denoise}</FormLabel>
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">{dictionary.numbers.fields.denoise}</FormLabel>
+                        <div className="text-sm text-muted-foreground">
+                          {dictionary.numbers.fields.denoiseDescription || 'Enable noise reduction for better audio quality'}
+                        </div>
+                      </div>
                       <FormControl>
-                        <Select onValueChange={field.onChange} value={field.value as ToggleValue}>
-                          <SelectTrigger>
-                            <SelectValue placeholder={dictionary.common.none} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {toggleOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -901,23 +882,19 @@ export default function NumbersPage() {
                   control={editForm.control}
                   name="recordingEnabled"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{dictionary.numbers.fields.recording}</FormLabel>
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">{dictionary.numbers.fields.recording}</FormLabel>
+                        <div className="text-sm text-muted-foreground">
+                          {dictionary.numbers.fields.recordingDescription || 'Record all calls to this number'}
+                        </div>
+                      </div>
                       <FormControl>
-                        <Select onValueChange={field.onChange} value={field.value as ToggleValue}>
-                          <SelectTrigger>
-                            <SelectValue placeholder={dictionary.common.none} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {toggleOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />

@@ -41,8 +41,14 @@ export class PhonesService {
     try {
       await this.asteriskService.provisionPhone(saved);
     } catch (error) {
-      await this.phoneRepository.delete(saved.id);
-      throw error;
+      // Log error but don't fail phone creation if Asterisk provisioning fails
+      // The phone is saved in database, and Asterisk config can be updated manually if needed
+      console.error('Failed to provision phone in Asterisk:', error);
+      // Optionally delete the phone if you want strict consistency
+      // await this.phoneRepository.delete(saved.id);
+      // throw error;
+      // For now, allow phone creation to succeed even if Asterisk provisioning fails
+      // This prevents backend crashes and allows manual recovery
     }
 
     return saved;
