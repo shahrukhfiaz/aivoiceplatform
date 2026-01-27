@@ -112,10 +112,19 @@ services:
     restart: always
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.phone.rule=Host(`${PHONE_DOMAIN:-phone.ai.digitalstorming.com}`)"
+      # Main phone page route
+      - "traefik.http.routers.phone.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && Path(`/softphone`)"
       - "traefik.http.routers.phone.entrypoints=websecure"
       - "traefik.http.routers.phone.tls=true"
       - "traefik.http.routers.phone.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.phone.middlewares=phone-rewrite"
+      - "traefik.http.middlewares.phone-rewrite.replacepath.path=/"
+      # Phone static assets route (phone.css, phone.js, sw.js, manifest.json, etc.)
+      - "traefik.http.routers.phone-assets.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && (Path(`/phone.css`) || Path(`/phone.js`) || Path(`/sw.js`) || Path(`/manifest.json`) || PathPrefix(`/assets`))"
+      - "traefik.http.routers.phone-assets.entrypoints=websecure"
+      - "traefik.http.routers.phone-assets.tls=true"
+      - "traefik.http.routers.phone-assets.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.phone-assets.priority=100"
       - "traefik.http.services.phone.loadbalancer.server.port=80"
     networks:
       - avr
@@ -174,7 +183,7 @@ services:
     restart: always
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://ai.digitalstorming.com/api}
-      - NEXT_PUBLIC_WEBRTC_CLIENT_URL=${NEXT_PUBLIC_WEBRTC_CLIENT_URL:-https://phone.ai.digitalstorming.com}
+      - NEXT_PUBLIC_WEBRTC_CLIENT_URL=${NEXT_PUBLIC_WEBRTC_CLIENT_URL:-https://ai.digitalstorming.com/softphone}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`)"
