@@ -45,7 +45,7 @@ services:
       - "traefik.http.routers.asterisk-wss.tls=true"
       - "traefik.http.routers.asterisk-wss.tls.certresolver=letsencrypt"
       - "traefik.http.routers.asterisk-wss.priority=100"
-      - "traefik.http.services.asterisk-wss.loadbalancer.server.port=8090"
+      - "traefik.http.services.asterisk-wss.loadbalancer.server.port=8088"
     volumes:
       - ./avr-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
       - ./avr-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
