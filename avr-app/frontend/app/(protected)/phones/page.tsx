@@ -103,7 +103,7 @@ export default function PhonesPage() {
 
   const isReadOnly = user?.role === 'viewer';
 
-  const websocketServer = useMemo(() => (domain ? `wss://${domain}:8089/ws` : ''), [domain]);
+  const websocketServer = useMemo(() => (domain ? `wss://${domain}/ws` : ''), [domain]);
 
   const form = useForm<PhoneFormValues>({
     resolver: zodResolver(phoneSchema),
