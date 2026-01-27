@@ -112,12 +112,10 @@ services:
     restart: always
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.phone.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && PathPrefix(`/softphone`)"
+      - "traefik.http.routers.phone.rule=Host(`${PHONE_DOMAIN:-phone.ai.digitalstorming.com}`)"
       - "traefik.http.routers.phone.entrypoints=websecure"
       - "traefik.http.routers.phone.tls=true"
       - "traefik.http.routers.phone.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.phone.middlewares=phone-strip"
-      - "traefik.http.middlewares.phone-strip.stripprefix.prefixes=/softphone"
       - "traefik.http.services.phone.loadbalancer.server.port=80"
     networks:
       - avr
@@ -176,7 +174,7 @@ services:
     restart: always
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://ai.digitalstorming.com/api}
-      - NEXT_PUBLIC_WEBRTC_CLIENT_URL=${NEXT_PUBLIC_WEBRTC_CLIENT_URL:-https://ai.digitalstorming.com/softphone}
+      - NEXT_PUBLIC_WEBRTC_CLIENT_URL=${NEXT_PUBLIC_WEBRTC_CLIENT_URL:-https://phone.ai.digitalstorming.com}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`)"
