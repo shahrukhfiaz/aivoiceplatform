@@ -58,17 +58,27 @@ interface ProviderDto {
   name: string;
 }
 
+interface TrunkDto {
+  id: string;
+  name: string;
+  direction: 'inbound' | 'outbound';
+}
+
 type AgentMode = 'pipeline' | 'sts';
+type AgentCallType = 'inbound' | 'outbound';
 
 type AgentDto = {
   id: string;
   name: string;
   status: 'running' | 'stopped';
   mode: AgentMode;
+  defaultCallType?: AgentCallType;
   providerAsr?: ProviderDto | null;
   providerLlm?: ProviderDto | null;
   providerTts?: ProviderDto | null;
   providerSts?: ProviderDto | null;
+  outboundTrunk?: TrunkDto | null;
+  outboundTrunkId?: string | null;
 };
 
 type VicidialConfigDto = {
@@ -86,10 +96,12 @@ const createAgentSchema = (dict: Dictionary) =>
     .object({
       name: z.string().min(2, dict.agents.validation.nameRequired),
       mode: z.enum(['pipeline', 'sts']),
+      defaultCallType: z.enum(['inbound', 'outbound']).optional(),
       providerAsrId: z.string().optional(),
       providerLlmId: z.string().optional(),
       providerTtsId: z.string().optional(),
       providerStsId: z.string().optional(),
+      outboundTrunkId: z.string().optional(),
     })
     .superRefine((values, ctx) => {
       if (values.mode === 'sts') {
@@ -191,6 +203,7 @@ function ProviderSelect({ form, name, label, options, disabled }: ProviderSelect
 export default function AgentsPage() {
   const [agents, setAgents] = useState<AgentDto[]>([]);
   const [providers, setProviders] = useState<ProviderDto[]>([]);
+  const [outboundTrunks, setOutboundTrunks] = useState<TrunkDto[]>([]);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -212,6 +225,10 @@ export default function AgentsPage() {
   const [vicidialDialogOpen, setVicidialDialogOpen] = useState(false);
   const [vicidialConfig, setVicidialConfig] = useState<VicidialConfigDto | null>(null);
   const [vicidialLoading, setVicidialLoading] = useState(false);
+  const [dialDialogOpen, setDialDialogOpen] = useState(false);
+  const [dialingAgent, setDialingAgent] = useState<AgentDto | null>(null);
+  const [dialForm, setDialForm] = useState({ toNumber: '', fromNumber: '' });
+  const [dialLoading, setDialLoading] = useState(false);
   const { dictionary } = useI18n();
   const { user } = useAuth();
   const isReadOnly = user?.role === 'viewer';
@@ -223,10 +240,12 @@ export default function AgentsPage() {
     defaultValues: {
       name: '',
       mode: 'sts',
+      defaultCallType: 'inbound',
       providerAsrId: undefined,
       providerLlmId: undefined,
       providerTtsId: undefined,
       providerStsId: undefined,
+      outboundTrunkId: undefined,
     },
   });
 
@@ -235,10 +254,12 @@ export default function AgentsPage() {
     defaultValues: {
       name: '',
       mode: 'pipeline',
+      defaultCallType: 'inbound',
       providerAsrId: undefined,
       providerLlmId: undefined,
       providerTtsId: undefined,
       providerStsId: undefined,
+      outboundTrunkId: undefined,
     },
   });
 
@@ -281,12 +302,16 @@ export default function AgentsPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [agentsRes, providersRes] = await Promise.all([
+      const [agentsRes, providersRes, trunksRes] = await Promise.all([
         apiFetch<PaginatedResponse<AgentDto>>('/agents', {
           query: { page: pagination.page, limit: pagination.limit },
           paginated: true,
         }),
         apiFetch<PaginatedResponse<ProviderDto>>('/providers', {
+          query: { page: 1, limit: 100 },
+          paginated: true,
+        }),
+        apiFetch<PaginatedResponse<TrunkDto>>('/trunks', {
           query: { page: 1, limit: 100 },
           paginated: true,
         }),
@@ -300,6 +325,8 @@ export default function AgentsPage() {
         hasPreviousPage: agentsRes.hasPreviousPage,
       });
       setProviders(providersRes.data);
+      // Filter only outbound trunks for the dropdown
+      setOutboundTrunks(trunksRes.data.filter(t => t.direction === 'outbound'));
       setError(null);
     } catch (err) {
       if (err instanceof Error) {
@@ -319,10 +346,12 @@ export default function AgentsPage() {
   const toRequestBody = (values: AgentFormValues) => ({
     name: values.name,
     mode: values.mode,
+    defaultCallType: values.defaultCallType || 'inbound',
     providerAsrId: values.providerAsrId || undefined,
     providerLlmId: values.providerLlmId || undefined,
     providerTtsId: values.providerTtsId || undefined,
     providerStsId: values.providerStsId || undefined,
+    outboundTrunkId: values.outboundTrunkId || null,
   });
 
   const onSubmit = async (values: AgentFormValues) => {
@@ -339,10 +368,12 @@ export default function AgentsPage() {
       form.reset({
         name: '',
         mode: 'sts',
+        defaultCallType: 'inbound',
         providerAsrId: undefined,
         providerLlmId: undefined,
         providerTtsId: undefined,
         providerStsId: undefined,
+        outboundTrunkId: undefined,
       });
       await loadData();
     } catch (err) {
@@ -365,10 +396,12 @@ export default function AgentsPage() {
     editForm.reset({
       name: agent.name,
       mode: agent.mode,
+      defaultCallType: agent.defaultCallType || 'inbound',
       providerAsrId: agent.providerAsr?.id,
       providerLlmId: agent.providerLlm?.id,
       providerTtsId: agent.providerTts?.id,
       providerStsId: agent.providerSts?.id,
+      outboundTrunkId: agent.outboundTrunk?.id,
     });
     setEditDialogOpen(true);
   };
@@ -506,6 +539,38 @@ export default function AgentsPage() {
     }
   };
 
+  const openDialDialog = (agent: AgentDto) => {
+    setDialingAgent(agent);
+    setDialForm({ toNumber: '', fromNumber: '' });
+    setDialDialogOpen(true);
+  };
+
+  const handleDial = async () => {
+    if (!dialingAgent || !dialForm.toNumber) return;
+    setDialLoading(true);
+    setError(null);
+    try {
+      await apiFetch(`/agents/${dialingAgent.id}/dial`, {
+        method: 'POST',
+        body: JSON.stringify({
+          toNumber: dialForm.toNumber,
+          fromNumber: dialForm.fromNumber || undefined,
+        }),
+      });
+      setDialDialogOpen(false);
+      setDialingAgent(null);
+      setDialForm({ toNumber: '', fromNumber: '' });
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(dictionary.agents.dial?.error || 'Failed to initiate call');
+      }
+    } finally {
+      setDialLoading(false);
+    }
+  };
+
   const pageSizeOptions = [10, 25, 50];
 
   return (
@@ -572,6 +637,33 @@ export default function AgentsPage() {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="defaultCallType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{dictionary.agents.fields.defaultCallType}</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} value={field.value || 'inbound'}>
+                          <SelectTrigger>
+                            <SelectValue>
+                              {dictionary.agents.callTypes[field.value as AgentCallType || 'inbound']}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="inbound">
+                              {dictionary.agents.callTypes.inbound}
+                            </SelectItem>
+                            <SelectItem value="outbound">
+                              {dictionary.agents.callTypes.outbound}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 {createMode === 'pipeline' ? (
                   <>
                     <ProviderSelect
@@ -602,6 +694,36 @@ export default function AgentsPage() {
                     options={providerOptions.STS}
                   />
                 ) : null}
+                <FormField
+                  control={form.control}
+                  name="outboundTrunkId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{dictionary.agents.fields.outboundTrunk}</FormLabel>
+                      <FormControl>
+                        <Select
+                          onValueChange={(value) => field.onChange(value === 'none' ? undefined : value)}
+                          value={field.value ?? 'none'}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={dictionary.common.none}>
+                              {field.value ? outboundTrunks.find((t) => t.id === field.value)?.name : dictionary.common.none}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">{dictionary.common.none}</SelectItem>
+                            {outboundTrunks.map((trunk) => (
+                              <SelectItem key={trunk.id} value={trunk.id}>
+                                {trunk.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <DialogFooter>
                   <Button type="submit" disabled={submitting || isReadOnly}>
                     {dictionary.agents.buttons.create}
@@ -702,6 +824,16 @@ export default function AgentsPage() {
                           >
                             <Phone className="mr-2 h-3 w-3" /> {dictionary.agents.sipCredentials.button}
                           </Button>
+                          {agent.status === 'running' && agent.outboundTrunk && (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => openDialDialog(agent)}
+                              disabled={isReadOnly || dialLoading}
+                            >
+                              <Phone className="mr-2 h-3 w-3" /> {dictionary.agents.dial?.button || 'Dial'}
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="destructive"
@@ -794,6 +926,33 @@ export default function AgentsPage() {
                   </FormItem>
                 )}
               />
+              <FormField
+                control={editForm.control}
+                name="defaultCallType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{dictionary.agents.fields.defaultCallType}</FormLabel>
+                    <FormControl>
+                      <Select onValueChange={field.onChange} value={field.value || 'inbound'}>
+                        <SelectTrigger>
+                          <SelectValue>
+                            {dictionary.agents.callTypes[field.value as AgentCallType || 'inbound']}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="inbound">
+                            {dictionary.agents.callTypes.inbound}
+                          </SelectItem>
+                          <SelectItem value="outbound">
+                            {dictionary.agents.callTypes.outbound}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               {editMode === 'pipeline' ? (
                 <>
                   <ProviderSelect
@@ -824,6 +983,36 @@ export default function AgentsPage() {
                   options={providerOptions.STS}
                 />
               ) : null}
+              <FormField
+                control={editForm.control}
+                name="outboundTrunkId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{dictionary.agents.fields.outboundTrunk}</FormLabel>
+                    <FormControl>
+                      <Select
+                        onValueChange={(value) => field.onChange(value === 'none' ? undefined : value)}
+                        value={field.value ?? 'none'}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={dictionary.common.none}>
+                            {field.value ? outboundTrunks.find((t) => t.id === field.value)?.name : dictionary.common.none}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{dictionary.common.none}</SelectItem>
+                          {outboundTrunks.map((trunk) => (
+                            <SelectItem key={trunk.id} value={trunk.id}>
+                              {trunk.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <DialogFooter>
                 <Button type="submit" disabled={updating || isReadOnly}>
                   {dictionary.agents.buttons.update}
@@ -906,6 +1095,57 @@ export default function AgentsPage() {
               <p><strong>{dictionary.agents.sipCredentials.host}:</strong> {vicidialConfig?.asteriskHost}:{vicidialConfig?.asteriskPort}</p>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={dialDialogOpen} onOpenChange={(open) => {
+        setDialDialogOpen(open);
+        if (!open) {
+          setDialingAgent(null);
+          setDialForm({ toNumber: '', fromNumber: '' });
+        }
+      }}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>{dictionary.agents.dial?.title || 'Make Outbound Call'}</DialogTitle>
+            <DialogDescription>
+              {(dictionary.agents.dial?.description || 'Initiate an outbound call using agent {agent}').replace('{agent}', dialingAgent?.name || '')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>{dictionary.agents.dial?.toNumber || 'Phone Number to Call'}</Label>
+              <Input
+                placeholder="+14155551234"
+                value={dialForm.toNumber}
+                onChange={(e) => setDialForm({ ...dialForm, toNumber: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>{dictionary.agents.dial?.fromNumber || 'Caller ID (From Number)'} ({dictionary.common.optional})</Label>
+              <Input
+                placeholder={dialingAgent?.outboundTrunk?.name || '+14155559999'}
+                value={dialForm.fromNumber}
+                onChange={(e) => setDialForm({ ...dialForm, fromNumber: e.target.value })}
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                {dictionary.agents.dial?.fromNumberHelp || 'Leave empty to use trunk default caller ID'}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialDialogOpen(false)}>
+              {dictionary.common.buttons.cancel}
+            </Button>
+            <Button onClick={handleDial} disabled={!dialForm.toNumber || dialLoading}>
+              {dialLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Phone className="mr-2 h-4 w-4" />
+              )}
+              {dictionary.agents.dial?.submit || 'Start Call'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </motion.div>

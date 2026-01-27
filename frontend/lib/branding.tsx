@@ -77,6 +77,26 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     fetchBranding();
   }, [fetchBranding]);
 
+  // Update document title and favicon when branding changes
+  useEffect(() => {
+    if (branding) {
+      document.title = branding.appName || 'Admin Panel';
+
+      // Update favicon if provided
+      if (branding.faviconUrl) {
+        const existingFavicon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+        if (existingFavicon) {
+          existingFavicon.href = branding.faviconUrl;
+        } else {
+          const favicon = document.createElement('link');
+          favicon.rel = 'icon';
+          favicon.href = branding.faviconUrl;
+          document.head.appendChild(favicon);
+        }
+      }
+    }
+  }, [branding]);
+
   const value = useMemo<BrandingContextValue>(
     () => ({
       branding,

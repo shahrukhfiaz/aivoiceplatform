@@ -14,6 +14,8 @@ import { TrunksModule } from './trunks/trunks.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { RecordingsModule } from './recordings/recordings.module';
 import { BrandingModule } from './branding/branding.module';
+import { ApiKeysModule } from './api-keys/api-keys.module';
+import { CallsModule } from './calls/calls.module';
 
 @Module({
   imports: [
@@ -37,6 +39,8 @@ import { BrandingModule } from './branding/branding.module';
     WebhooksModule,
     RecordingsModule,
     BrandingModule,
+    ApiKeysModule,
+    CallsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

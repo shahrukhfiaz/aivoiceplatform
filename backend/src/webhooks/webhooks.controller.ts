@@ -10,14 +10,23 @@ import {
   Query,
 } from '@nestjs/common';
 import { WebhookEventDto } from './dto/webhook-event.dto';
-import { WebhooksService } from './webhooks.service';
+import {
+  WebhooksService,
+  EnhancedSummary,
+  TranscriptMessage,
+} from './webhooks.service';
 import { PaginatedResult, PaginationQuery } from '../common/pagination';
+import { CallType } from './call.entity';
+import { RecordingsService } from '../recordings/recordings.service';
 
 @Controller('webhooks')
 export class WebhooksController {
   private readonly logger = new Logger(WebhooksController.name);
 
-  constructor(private readonly webhooksService: WebhooksService) {}
+  constructor(
+    private readonly webhooksService: WebhooksService,
+    private readonly recordingsService: RecordingsService,
+  ) {}
 
   @Post()
   async handleWebhook(
@@ -93,6 +102,97 @@ export class WebhooksController {
   ) {
     const since = this.resolveRange(range);
     return this.webhooksService.getSummary(agentId, since);
+  }
+
+  @Get('enhanced-summary')
+  async enhancedSummary(
+    @Query('agentId') agentId?: string,
+    @Query('range') range?: string,
+  ): Promise<EnhancedSummary> {
+    const since = this.resolveRange(range);
+    return this.webhooksService.getEnhancedSummary(agentId, since);
+  }
+
+  @Get('calls-enhanced')
+  async listCallsEnhanced(
+    @Query()
+    query: PaginationQuery & {
+      agentId?: string;
+      providerId?: string;
+      callType?: CallType;
+      status?: 'in_progress' | 'completed' | 'failed';
+      phoneNumber?: string;
+      range?: string;
+      uuid?: string;
+      startedFrom?: string;
+      startedTo?: string;
+      sortField?: 'startedAt' | 'endedAt';
+      sortDirection?: 'asc' | 'desc';
+    },
+  ) {
+    const {
+      agentId,
+      providerId,
+      callType,
+      status,
+      phoneNumber,
+      range,
+      uuid,
+      startedFrom,
+      startedTo,
+      sortField,
+      sortDirection,
+    } = query;
+    const since = this.resolveRange(range);
+    const result = await this.webhooksService.listCallsEnhanced(
+      {
+        agentId,
+        providerId,
+        callType,
+        status,
+        phoneNumber,
+        since,
+        uuid,
+        startedFrom,
+        startedTo,
+        sortField,
+        sortDirection,
+      },
+      query,
+    );
+
+    // Check recording availability for each call
+    const callsWithRecordings = await Promise.all(
+      result.data.map(async (call) => {
+        const recording = await this.recordingsService.findByCallUuid(call.uuid);
+        return {
+          id: call.id,
+          uuid: call.uuid,
+          agentId: call.agentId,
+          agentName: call.agent?.name ?? null,
+          callType: call.callType,
+          fromNumber: call.fromNumber,
+          toNumber: call.toNumber,
+          providerId: call.providerId,
+          providerName: call.providerName,
+          endReason: call.endReason,
+          cost: call.cost,
+          startedAt: call.startedAt,
+          endedAt: call.endedAt,
+          hasRecording: recording !== null,
+        };
+      }),
+    );
+
+    return {
+      ...result,
+      data: callsWithRecordings,
+    };
+  }
+
+  @Get('calls/:id/transcript')
+  async getTranscript(@Param('id') id: string): Promise<TranscriptMessage[]> {
+    return this.webhooksService.getCallTranscript(id);
   }
 
   @Get('calls/:id')

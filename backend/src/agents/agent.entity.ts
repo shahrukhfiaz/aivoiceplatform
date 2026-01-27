@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Provider } from '../providers/provider.entity';
 import { PhoneNumber } from '../numbers/number.entity';
+import { Trunk } from '../trunks/trunk.entity';
 
 export enum AgentStatus {
   RUNNING = 'running',
@@ -17,6 +18,11 @@ export enum AgentStatus {
 export enum AgentMode {
   PIPELINE = 'pipeline',
   STS = 'sts',
+}
+
+export enum AgentCallType {
+  INBOUND = 'inbound',
+  OUTBOUND = 'outbound',
 }
 
 @Entity()
@@ -42,6 +48,9 @@ export class Agent {
   @Column({ type: 'text', unique: true, nullable: true })
   sipExtension: string | null;
 
+  @Column({ type: 'text', default: AgentCallType.INBOUND })
+  defaultCallType: AgentCallType;
+
   @ManyToOne(() => Provider, { nullable: true, eager: true })
   @JoinColumn({ name: 'provider_asr_id' })
   providerAsr?: Provider | null;
@@ -57,6 +66,13 @@ export class Agent {
   @ManyToOne(() => Provider, { nullable: true, eager: true })
   @JoinColumn({ name: 'provider_sts_id' })
   providerSts?: Provider | null;
+
+  @ManyToOne(() => Trunk, { nullable: true, eager: true })
+  @JoinColumn({ name: 'outbound_trunk_id' })
+  outboundTrunk?: Trunk | null;
+
+  @Column({ nullable: true })
+  outboundTrunkId?: string | null;
 
   @OneToMany(() => PhoneNumber, (number) => number.agent)
   numbers?: PhoneNumber[];

@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
-import { AgentMode } from '../agent.entity';
+import { AgentCallType, AgentMode } from '../agent.entity';
 
 export class CreateAgentDto {
   @IsString()
@@ -8,6 +8,10 @@ export class CreateAgentDto {
   @IsOptional()
   @IsEnum(AgentMode)
   mode?: AgentMode;
+
+  @IsOptional()
+  @IsEnum(AgentCallType)
+  defaultCallType?: AgentCallType;
 
   @IsOptional()
   @IsUUID()
@@ -24,4 +28,8 @@ export class CreateAgentDto {
   @IsOptional()
   @IsUUID()
   providerStsId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  outboundTrunkId?: string;
 }

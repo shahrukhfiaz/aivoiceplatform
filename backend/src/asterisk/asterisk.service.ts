@@ -4,7 +4,7 @@ import * as path from 'path';
 import Ari, { Client } from 'ari-client';
 import { Phone } from '../phones/phone.entity';
 import { PhoneNumber } from '../numbers/number.entity';
-import { Trunk } from '../trunks/trunk.entity';
+import { Trunk, TrunkDirection } from '../trunks/trunk.entity';
 
 @Injectable()
 export class AsteriskService {
@@ -97,11 +97,33 @@ export class AsteriskService {
   }
 
   async provisionTrunk(trunk: Trunk): Promise<void> {
+    // PJSIP configuration
     await this.upsertBlock(
       this.trunksPath,
       `trunk-${trunk.id}`,
       this.buildTrunkBlock(trunk),
     );
+
+    // For inbound trunks with DID and agent, add inbound dialplan entry
+    if (trunk.direction === 'inbound' && trunk.didNumber && trunk.agent) {
+      await this.upsertBlock(
+        this.extensionsPath,
+        `trunk-dialplan-${trunk.id}`,
+        this.buildInboundDialplan(trunk),
+      );
+      await this.reloadModule('pbx_config.so');
+    }
+
+    // For outbound trunks, add outbound dialplan context
+    if (trunk.direction === 'outbound') {
+      await this.upsertBlock(
+        this.extensionsPath,
+        `trunk-dialplan-${trunk.id}`,
+        this.buildOutboundDialplan(trunk),
+      );
+      await this.reloadModule('pbx_config.so');
+    }
+
     await this.reloadModule('res_pjsip.so');
   }
 
@@ -115,8 +137,15 @@ export class AsteriskService {
     await this.reloadModule('pbx_config.so');
   }
 
-  async removeTrunk(trunkId: string): Promise<void> {
+  async removeTrunk(trunkId: string, direction?: TrunkDirection): Promise<void> {
     await this.removeBlock(this.trunksPath, `trunk-${trunkId}`);
+
+    // Remove dialplan entry for both inbound and outbound trunks
+    if (direction === 'inbound' || direction === 'outbound') {
+      await this.removeBlock(this.extensionsPath, `trunk-dialplan-${trunkId}`);
+      await this.reloadModule('pbx_config.so');
+    }
+
     await this.reloadModule('res_pjsip.so');
   }
 
@@ -314,42 +343,193 @@ export class AsteriskService {
   }
 
   private buildTrunkBlock(trunk: Trunk): string {
-    const codecs = this.normalizeCodecs(trunk.codecs);
+    if (trunk.direction === 'inbound') {
+      return this.buildInboundTrunkBlock(trunk);
+    } else {
+      return this.buildOutboundTrunkBlock(trunk);
+    }
+  }
 
-    const endpointSection = [
+  private buildInboundTrunkBlock(trunk: Trunk): string {
+    const codecs = this.normalizeCodecs(trunk.codecs);
+    const allowedIps = trunk.allowedIps?.split(',').map(ip => ip.trim()).filter(Boolean) || [];
+
+    const sections: string[] = [];
+
+    // Endpoint section - for receiving calls from provider
+    const endpointLines = [
       `[${trunk.id}]`,
       'type=endpoint',
       `transport=transport-${trunk.transport || 'udp'}`,
       `context=${process.env.TENANT || 'demo'}`,
       'disallow=all',
       `allow=${codecs}`,
-      `auth=${trunk.id}`,
       `aors=${trunk.id}`,
+      'direct_media=no',
+      'trust_id_inbound=yes',
+      'send_pai=yes',
+      'send_rpid=yes',
+    ];
+
+    sections.push(endpointLines.join('\n'));
+
+    // AOR section
+    sections.push([
+      `[${trunk.id}]`,
+      'type=aor',
+      'max_contacts=10',
+      'qualify_frequency=60',
+    ].join('\n'));
+
+    // Identify section for IP-based matching
+    if (allowedIps.length > 0) {
+      const identifyLines = [
+        `[${trunk.id}]`,
+        'type=identify',
+        `endpoint=${trunk.id}`,
+        ...allowedIps.map(ip => `match=${ip}`),
+      ];
+      sections.push(identifyLines.join('\n'));
+    }
+
+    return sections.join('\n\n');
+  }
+
+  private buildOutboundTrunkBlock(trunk: Trunk): string {
+    const codecs = this.normalizeCodecs(trunk.codecs);
+
+    if (!trunk.host) {
+      throw new Error('Outbound trunk must have a host configured');
+    }
+
+    const sections: string[] = [];
+
+    // Endpoint section - for sending calls to provider
+    const endpointLines = [
+      `[${trunk.id}]`,
+      'type=endpoint',
+      `transport=transport-${trunk.transport || 'udp'}`,
+      `context=${process.env.TENANT || 'demo'}`,
+      'disallow=all',
+      `allow=${codecs}`,
       `outbound_auth=${trunk.id}`,
-      `trust_id_inbound=yes`,
-      `trust_id_outbound=yes`,
-      `send_pai=yes`,
-      `send_rpid=yes`,
+      `aors=${trunk.id}`,
+      'direct_media=no',
+      // NAT traversal options
+      'force_rport=yes',
+      'rewrite_contact=yes',
+      'rtp_symmetric=yes',
+      trunk.outboundCallerId ? `from_user=${trunk.outboundCallerId}` : null,
+      `from_domain=${trunk.host}`,
+      'trust_id_outbound=yes',
+      'send_pai=yes',
+      'send_rpid=yes',
     ].filter(Boolean) as string[];
 
-    const authSection = [
+    sections.push(endpointLines.join('\n'));
+
+    // Auth section
+    sections.push([
       `[${trunk.id}]`,
       'type=auth',
       'auth_type=userpass',
-      `username=${trunk.id}`,
+      `username=${trunk.username || trunk.id}`,
       `password=${trunk.password}`,
-    ];
+    ].join('\n'));
 
-    const aorSection = [
+    // AOR section - static contact for outbound trunks
+    const aorLines = [
       `[${trunk.id}]`,
       'type=aor',
+      `contact=sip:${trunk.host}:${trunk.port || 5060}`,
       'max_contacts=1',
-      'remove_existing=yes',
+      'qualify_frequency=0', // Disable qualify - many carriers don't respond to OPTIONS
+    ];
+    sections.push(aorLines.join('\n'));
+
+    // Registration section (if enabled)
+    if (trunk.registerEnabled) {
+      sections.push([
+        `[${trunk.id}]`,
+        'type=registration',
+        `outbound_auth=${trunk.id}`,
+        `server_uri=sip:${trunk.host}:${trunk.port || 5060}`,
+        `client_uri=sip:${trunk.username || trunk.id}@${trunk.host}`,
+        `expiration=${trunk.registerInterval || 120}`,
+        'retry_interval=60',
+        'max_retries=10',
+      ].join('\n'));
+    }
+
+    return sections.join('\n\n');
+  }
+
+  private buildInboundDialplan(trunk: Trunk): string {
+    if (!trunk.agent) {
+      throw new Error('Inbound trunk must have an assigned agent');
+    }
+
+    const tenant = process.env.TENANT || 'demo';
+    const agent = trunk.agent;
+    const didNumber = trunk.didNumber || '_X.';
+
+    const lines = [
+      `[${tenant}]`,
+      `exten => ${didNumber},1,NoOp(Inbound trunk ${trunk.name} -> Agent ${agent.name})`,
+      ' same => n,Answer()',
+      ' same => n,Ringing()',
+      ' same => n,Wait(1)',
+      ' same => n,Set(AVR_NUMBER=${CALLERID(num)})',
+      " same => n,Set(UUID=${SHELL(uuidgen | tr -d '\\n')})",
+      ` same => n,Set(JSON_BODY={"uuid":"\${UUID}","payload":{"from":"\${CALLERID(num)}","to":"${trunk.didNumber}","direction":"inbound","trunkId":"${trunk.id}","trunkName":"${trunk.name}"}})`,
+      ' same => n,Set(CURLOPT(httpheader)=Content-Type: application/json)',
+      ` same => n,Set(JSON_RESPONSE=\${CURL(http://avr-core-${agent.id}:${agent.httpPort}/call,\${JSON_BODY})})`,
     ];
 
-    return [...endpointSection, '', ...authSection, '', ...aorSection].join(
-      '\n',
+    if (trunk.recordingEnabled) {
+      lines.push(` same => n,MixMonitor(/var/spool/asterisk/monitor/${tenant}/\${UUID}.wav)`);
+    }
+    if (trunk.denoiseEnabled) {
+      lines.push(' same => n,Set(DENOISE(rx)=on)');
+    }
+
+    lines.push(
+      ` same => n,Dial(AudioSocket/avr-core-${agent.id}:${agent.port}/\${UUID})`,
+      ' same => n,Hangup()',
     );
+
+    return lines.join('\n');
+  }
+
+  private buildOutboundDialplan(trunk: Trunk): string {
+    const tenant = process.env.TENANT || 'demo';
+    const callerId = trunk.outboundCallerId || '';
+
+    // Outbound dialplan in the main tenant context
+    // This allows any phone in the tenant context to dial out through this trunk
+    // Using flexible patterns to match various phone number formats
+    const lines = [
+      `[${tenant}]`,
+      // Pattern for 10-digit numbers (any format)
+      `exten => _XXXXXXXXXX,1,NoOp(Outbound call via trunk ${trunk.name} to \${EXTEN})`,
+      ' same => n,Set(CALLERID(num)=' + (callerId || '${CALLERID(num)}') + ')',
+      ` same => n,Dial(PJSIP/\${EXTEN}@${trunk.id},60,Tt)`,
+      ' same => n,Hangup()',
+      '',
+      // Pattern for 11-digit numbers starting with 1
+      `exten => _1XXXXXXXXXX,1,NoOp(Outbound call via trunk ${trunk.name} to \${EXTEN})`,
+      ' same => n,Set(CALLERID(num)=' + (callerId || '${CALLERID(num)}') + ')',
+      ` same => n,Dial(PJSIP/\${EXTEN}@${trunk.id},60,Tt)`,
+      ' same => n,Hangup()',
+      '',
+      // Pattern for numbers starting with + (international E.164 format)
+      `exten => _+X.,1,NoOp(Outbound international call via trunk ${trunk.name} to \${EXTEN})`,
+      ' same => n,Set(CALLERID(num)=' + (callerId || '${CALLERID(num)}') + ')',
+      ` same => n,Dial(PJSIP/\${EXTEN}@${trunk.id},60,Tt)`,
+      ' same => n,Hangup()',
+    ];
+
+    return lines.join('\n');
   }
 
   private normalizeCodecs(input?: string): string {

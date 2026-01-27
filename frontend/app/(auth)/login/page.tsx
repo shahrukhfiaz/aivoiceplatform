@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -73,13 +72,6 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, router]);
 
-  // Update document title with branding
-  useEffect(() => {
-    if (branding) {
-      document.title = branding.loginTitle || branding.appName || 'AVR Admin';
-    }
-  }, [branding]);
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
@@ -150,16 +142,6 @@ export default function LoginPage() {
             </Form>
             <p className="text-center text-xs text-muted-foreground">
               {dictionary.login.help}
-            </p>
-            <p className="text-center text-xs text-muted-foreground">
-              <Link
-                className="underline"
-                href={branding?.wikiUrl || "https://wiki.agentvoiceresponse.com"}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {dictionary.login.docs}
-              </Link>
             </p>
           </CardContent>
         </Card>

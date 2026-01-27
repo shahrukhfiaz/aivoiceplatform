@@ -15,6 +15,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../users/user.entity';
 import { AgentsService } from './agents.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
+import { DialCallDto } from './dto/dial-call.dto';
+import { DialResponseDto } from './dto/dial-response.dto';
 import { RunAgentDto } from './dto/run-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { VicidialConfigDto } from './dto/vicidial-config.dto';
@@ -81,6 +83,15 @@ export class AgentsController {
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
   stopAgent(@Param('id') id: string): Promise<Agent> {
     return this.agentsService.stopAgent(id);
+  }
+
+  @Post(':id/dial')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  dialOutbound(
+    @Param('id') id: string,
+    @Body() dialCallDto: DialCallDto,
+  ): Promise<DialResponseDto> {
+    return this.agentsService.dialOutbound(id, dialCallDto);
   }
 
   @Get(':id/vicidial-config')

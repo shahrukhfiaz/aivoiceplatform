@@ -1,19 +1,27 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
 import { DockerService } from '../docker/docker.service';
 import { AsteriskService } from '../asterisk/asterisk.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import { Provider, ProviderType } from '../providers/provider.entity';
+import { Trunk } from '../trunks/trunk.entity';
 import { CreateAgentDto } from './dto/create-agent.dto';
+import { DialCallDto } from './dto/dial-call.dto';
+import { DialResponseDto } from './dto/dial-response.dto';
 import { RunAgentDto } from './dto/run-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { VicidialConfigDto } from './dto/vicidial-config.dto';
-import { Agent, AgentMode, AgentStatus } from './agent.entity';
+import { Agent, AgentCallType, AgentMode, AgentStatus } from './agent.entity';
 import {
   buildPaginatedResult,
   getPagination,
@@ -32,8 +40,12 @@ export class AgentsService {
     private readonly agentRepository: Repository<Agent>,
     @InjectRepository(Provider)
     private readonly providerRepository: Repository<Provider>,
+    @InjectRepository(Trunk)
+    private readonly trunkRepository: Repository<Trunk>,
     private readonly dockerService: DockerService,
     private readonly asteriskService: AsteriskService,
+    @Inject(forwardRef(() => WebhooksService))
+    private readonly webhooksService: WebhooksService,
   ) {}
 
   async create(createAgentDto: CreateAgentDto): Promise<Agent> {
@@ -41,6 +53,7 @@ export class AgentsService {
     const agent = this.agentRepository.create({
       name: createAgentDto.name,
       mode: createAgentDto.mode ?? AgentMode.PIPELINE,
+      defaultCallType: createAgentDto.defaultCallType ?? AgentCallType.INBOUND,
       port: Math.floor(Math.random() * 1000) + 5000,
       httpPort: Math.floor(Math.random() * 1000) + 7000,
       sipExtension,
@@ -57,6 +70,9 @@ export class AgentsService {
     );
     agent.providerSts = await this.resolveProvider(
       createAgentDto.providerStsId,
+    );
+    agent.outboundTrunk = await this.resolveTrunk(
+      createAgentDto.outboundTrunkId,
     );
 
     this.assertModeRequirements(agent);
@@ -95,6 +111,10 @@ export class AgentsService {
       agent.mode = updateAgentDto.mode;
     }
 
+    if (updateAgentDto.defaultCallType !== undefined) {
+      agent.defaultCallType = updateAgentDto.defaultCallType;
+    }
+
     // Retrocompatibily: if httpPort is not set, generate a random port
     if (agent.httpPort === null) {
       agent.httpPort = Math.floor(Math.random() * 1000) + 7000;
@@ -118,6 +138,11 @@ export class AgentsService {
     if (updateAgentDto.providerStsId !== undefined) {
       agent.providerSts = await this.resolveProvider(
         updateAgentDto.providerStsId,
+      );
+    }
+    if (updateAgentDto.outboundTrunkId !== undefined) {
+      agent.outboundTrunk = await this.resolveTrunk(
+        updateAgentDto.outboundTrunkId,
       );
     }
 
@@ -154,8 +179,16 @@ export class AgentsService {
       throw new NotFoundException('Agent not found');
     }
     const env = this.buildEnv(agent, runAgentDto.env ?? []);
+
+    // Build webhook URL - use Docker gateway IP on Linux since host.docker.internal doesn't work
+    let webhookUrl = process.env.WEBHOOK_URL;
+    if (!webhookUrl || webhookUrl.includes('host.docker.internal')) {
+      // Default to Docker gateway IP (works on Linux)
+      webhookUrl = 'http://172.20.0.1:3001/webhooks';
+    }
+
     const coreEnv = this.buildEnv(agent, [
-      ...(process.env.WEBHOOK_URL ? [`WEBHOOK_URL=${process.env.WEBHOOK_URL}`] : []),
+      `WEBHOOK_URL=${webhookUrl}`,
       ...(process.env.WEBHOOK_SECRET ? [`WEBHOOK_SECRET=${process.env.WEBHOOK_SECRET}`] : []),
     ]);
 
@@ -309,6 +342,102 @@ export class AgentsService {
     return this.agentRepository.save(agent);
   }
 
+  async dialOutbound(
+    agentId: string,
+    dto: DialCallDto,
+  ): Promise<DialResponseDto> {
+    // 1. Validate agent exists
+    const agent = await this.findOne(agentId);
+
+    // 2. Validate agent is running
+    if (agent.status !== AgentStatus.RUNNING) {
+      throw new BadRequestException({
+        code: 'AGENT_NOT_RUNNING',
+        message: 'Agent must be running to initiate outbound calls',
+      });
+    }
+
+    // 3. Validate agent has outbound trunk
+    if (!agent.outboundTrunk) {
+      throw new BadRequestException({
+        code: 'NO_OUTBOUND_TRUNK',
+        message: 'Agent does not have an outbound trunk configured',
+      });
+    }
+
+    const trunk = agent.outboundTrunk;
+    const fromNumber = dto.fromNumber || trunk.outboundCallerId || '';
+    const uuid = uuidv4();
+
+    // 4. Create call record in database
+    const call = await this.webhooksService.createOutboundCall({
+      uuid,
+      agentId,
+      callType: 'outbound',
+      toNumber: dto.toNumber,
+      fromNumber,
+      metadata: dto.metadata,
+    });
+
+    // 5. Send dial request to agent container
+    try {
+      await this.initiateCallViaAgent(agent, {
+        uuid,
+        toNumber: dto.toNumber,
+        fromNumber,
+        trunkId: trunk.id,
+        timeout: dto.timeout || 60,
+        metadata: dto.metadata,
+      });
+    } catch (error) {
+      await this.webhooksService.updateCallStatus(uuid, 'failed', error.message);
+      throw new InternalServerErrorException({
+        code: 'DIAL_FAILED',
+        message: `Failed to initiate call: ${error.message}`,
+      });
+    }
+
+    return {
+      id: call.id,
+      uuid: call.uuid,
+      status: 'queued',
+      agentId,
+      toNumber: dto.toNumber,
+      fromNumber,
+      trunkId: trunk.id,
+      trunkName: trunk.name,
+      callType: 'outbound',
+      createdAt: new Date().toISOString(),
+      metadata: dto.metadata,
+    };
+  }
+
+  private async initiateCallViaAgent(
+    agent: Agent,
+    params: {
+      uuid: string;
+      toNumber: string;
+      fromNumber: string;
+      trunkId: string;
+      timeout: number;
+      metadata?: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    const coreContainerName = `avr-core-${agent.id}`;
+    const url = `http://${coreContainerName}:${agent.httpPort}/dial`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Agent returned ${response.status}: ${error}`);
+    }
+  }
+
   private async resolveProvider(id?: string | null): Promise<Provider | null> {
     if (!id) {
       return null;
@@ -319,6 +448,20 @@ export class AgentsService {
       throw new NotFoundException(`Provider ${id} not found`);
     }
     return provider;
+  }
+
+  private async resolveTrunk(id?: string | null): Promise<Trunk | null> {
+    if (!id) {
+      return null;
+    }
+
+    const trunk = await this.trunkRepository.findOne({
+      where: { id, direction: 'outbound' },
+    });
+    if (!trunk) {
+      throw new NotFoundException(`Outbound trunk ${id} not found`);
+    }
+    return trunk;
   }
 
   private buildContainerName(agentId: string, type?: string) {
@@ -473,7 +616,7 @@ export class AgentsService {
       throw new BadRequestException('Agent does not have a SIP extension assigned');
     }
 
-    const sipPeerConfig = `[avr_agent_${agent.sipExtension}]
+    const sipPeerConfig = `[agent_${agent.sipExtension}]
 disallow=all
 allow=ulaw
 allow=alaw
@@ -494,7 +637,7 @@ same => n,SIPAddHeader(X-VICIdial-List-Id: \${list_id})
 same => n,SIPAddHeader(X-VICIdial-Call-Type: AI_BOT)
 same => n,Set(CHANNEL(audioreadformat)=ulaw)
 same => n,Set(CHANNEL(audiowriteformat)=ulaw)
-same => n,Dial(SIP/${agent.sipExtension}@avr_agent_${agent.sipExtension},120,tTog)
+same => n,Dial(SIP/${agent.sipExtension}@agent_${agent.sipExtension},120,tTog)
 same => n,Hangup()`;
 
     return {

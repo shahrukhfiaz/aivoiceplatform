@@ -8,5 +8,6 @@ import { RecordingsService } from './recordings.service';
   imports: [TypeOrmModule.forFeature([Recording])],
   controllers: [RecordingsController],
   providers: [RecordingsService],
+  exports: [RecordingsService],
 })
 export class RecordingsModule {}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpDown, Download, Eye, Play, RefreshCcw } from 'lucide-react';
+import { ArrowUpDown, Download, Eye, MessageSquare, Play, RefreshCcw } from 'lucide-react';
 import { apiFetch, ApiError, getApiUrl, getStoredToken, type PaginatedResponse } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { TablePagination } from '@/components/ui/pagination';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +27,38 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { TranscriptDialog } from '@/components/transcript-dialog';
 
+interface AgentDto {
+  id: string;
+  name: string;
+  status: string;
+}
+
+interface ProviderDto {
+  id: string;
+  name: string;
+  type: string;
+}
+
+interface EnhancedCallDto {
+  id: string;
+  uuid: string;
+  agentId?: string | null;
+  agentName?: string | null;
+  callType?: 'inbound' | 'outbound' | null;
+  fromNumber?: string | null;
+  toNumber?: string | null;
+  providerId?: string | null;
+  providerName?: string | null;
+  endReason?: string | null;
+  cost?: number | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  hasRecording?: boolean;
+}
+
+// Legacy interface for backward compatibility
 interface CallSummaryDto {
   id: string;
   uuid: string;
@@ -55,18 +94,20 @@ interface CallInitiatedPayload {
 
 export default function CallsPage() {
   const { dictionary } = useI18n();
-  const [calls, setCalls] = useState<CallSummaryDto[]>([]);
+  const [calls, setCalls] = useState<EnhancedCallDto[]>([]);
+  const [agents, setAgents] = useState<AgentDto[]>([]);
+  const [providers, setProviders] = useState<ProviderDto[]>([]);
   const [callInitiatedMap, setCallInitiatedMap] = useState<
     Record<string, CallInitiatedPayload | null>
   >({});
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 25,
     total: 0,
     hasNextPage: false,
     hasPreviousPage: false,
   });
-  const pageSizeOptions = [10, 25, 50];
+  const pageSizeOptions = [10, 25, 50, 100];
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -75,16 +116,50 @@ export default function CallsPage() {
   const [audioMap, setAudioMap] = useState<Record<string, string>>({});
   const [loadingAudioId, setLoadingAudioId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const [transcriptCallId, setTranscriptCallId] = useState<string | null>(null);
+  const [transcriptCallUuid, setTranscriptCallUuid] = useState<string | null>(null);
+  const [playerOpen, setPlayerOpen] = useState(false);
+  const [playerCallId, setPlayerCallId] = useState<string | null>(null);
+  const [playerCallUuid, setPlayerCallUuid] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     uuid: '',
     startedFrom: '',
     startedTo: '',
+    agentId: 'all',
+    providerId: 'all',
+    callType: 'all' as 'all' | 'inbound' | 'outbound',
+    status: 'all' as 'all' | 'in_progress' | 'completed' | 'failed',
+    phoneNumber: '',
   });
   const [sort, setSort] = useState<{ field: 'startedAt' | 'endedAt'; direction: 'asc' | 'desc' }>({
     field: 'startedAt',
     direction: 'desc',
   });
   const filtersRef = useRef(filters);
+
+  // Load agents and providers for filter dropdowns
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const [agentsRes, providersRes] = await Promise.all([
+          apiFetch<PaginatedResponse<AgentDto>>('/agents', {
+            query: { page: 1, limit: 100 },
+            paginated: true,
+          }),
+          apiFetch<PaginatedResponse<ProviderDto>>('/providers', {
+            query: { page: 1, limit: 100 },
+            paginated: true,
+          }),
+        ]);
+        setAgents(agentsRes.data);
+        setProviders(providersRes.data);
+      } catch (err) {
+        console.error('Failed to load filter options:', err);
+      }
+    };
+    void loadFilterOptions();
+  }, []);
 
   useEffect(() => {
     filtersRef.current = filters;
@@ -122,13 +197,18 @@ export default function CallsPage() {
     setLoading(true);
     try {
       const activeFilters = overrideFilters ?? filtersRef.current;
-      const data = await apiFetch<PaginatedResponse<CallSummaryDto>>('/webhooks/calls', {
+      const data = await apiFetch<PaginatedResponse<EnhancedCallDto>>('/webhooks/calls-enhanced', {
         query: {
           page: pagination.page,
           limit: pagination.limit,
           uuid: activeFilters.uuid || undefined,
           startedFrom: activeFilters.startedFrom || undefined,
           startedTo: activeFilters.startedTo || undefined,
+          agentId: activeFilters.agentId !== 'all' ? activeFilters.agentId : undefined,
+          providerId: activeFilters.providerId !== 'all' ? activeFilters.providerId : undefined,
+          callType: activeFilters.callType !== 'all' ? activeFilters.callType : undefined,
+          status: activeFilters.status !== 'all' ? activeFilters.status : undefined,
+          phoneNumber: activeFilters.phoneNumber || undefined,
           sortField: sort.field,
           sortDirection: sort.direction,
         },
@@ -274,13 +354,15 @@ export default function CallsPage() {
   const recordingAvailableById = useMemo(() => {
     const map: Record<string, boolean> = {};
     calls.forEach((call) => {
-      map[call.id] = Boolean(callInitiatedMap[call.id]?.recording);
+      // Use hasRecording from API response (checks recordings table)
+      // Falls back to callInitiatedMap for backward compatibility
+      map[call.id] = call.hasRecording ?? Boolean(callInitiatedMap[call.id]?.recording);
     });
     return map;
   }, [callInitiatedMap, calls]);
 
   const handleDownload = useCallback(
-    async (call: CallSummaryDto) => {
+    async (call: EnhancedCallDto) => {
       setDownloadingId(call.id);
       try {
         const token = getStoredToken();
@@ -318,7 +400,13 @@ export default function CallsPage() {
   );
 
   const handlePlay = useCallback(
-    async (call: CallSummaryDto) => {
+    async (call: EnhancedCallDto) => {
+      // Open the player dialog
+      setPlayerCallId(call.id);
+      setPlayerCallUuid(call.uuid);
+      setPlayerOpen(true);
+
+      // Load audio if not already loaded
       if (audioMap[call.id]) {
         return;
       }
@@ -352,6 +440,58 @@ export default function CallsPage() {
     [audioMap, dictionary.calls.errors.authRequired, dictionary.calls.errors.play],
   );
 
+  const openTranscript = useCallback((call: EnhancedCallDto) => {
+    setTranscriptCallId(call.id);
+    setTranscriptCallUuid(call.uuid);
+    setTranscriptOpen(true);
+  }, []);
+
+  const formatDate = useCallback((value: string | null) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleDateString();
+  }, []);
+
+  const formatTime = useCallback((value: string | null) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleTimeString();
+  }, []);
+
+  const getEndReasonBadge = useCallback((reason: string | null | undefined, endedAt: string | null | undefined) => {
+    // If call hasn't ended yet, show "In Progress"
+    if (!endedAt) {
+      return (
+        <Badge variant="secondary" className="animate-pulse bg-green-500/20 text-green-600">
+          {dictionary.calls.endReasons?.in_progress ?? 'In Progress'}
+        </Badge>
+      );
+    }
+    if (!reason) return null;
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      completed: 'default',
+      abandoned: 'secondary',
+      failed: 'destructive',
+      no_answer: 'outline',
+    };
+    return (
+      <Badge variant={variants[reason] || 'outline'}>
+        {dictionary.calls.endReasons?.[reason as keyof typeof dictionary.calls.endReasons] || reason}
+      </Badge>
+    );
+  }, [dictionary.calls.endReasons]);
+
+  const getCallTypeBadge = useCallback((callType: 'inbound' | 'outbound' | null | undefined) => {
+    if (!callType) return '—';
+    return (
+      <Badge variant={callType === 'inbound' ? 'default' : 'secondary'}>
+        {dictionary.calls.filters?.[callType as keyof typeof dictionary.calls.filters] || callType}
+      </Badge>
+    );
+  }, [dictionary.calls.filters]);
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -373,14 +513,80 @@ export default function CallsPage() {
           <CardTitle>{dictionary.calls.title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mb-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <Input
-              placeholder={dictionary.calls.filters.uuid}
+              placeholder={dictionary.calls.filters.uuid ?? 'Call ID'}
               value={filters.uuid}
               onChange={(event) =>
                 setFilters((prev) => ({ ...prev, uuid: event.target.value }))
               }
             />
+            <Input
+              placeholder={dictionary.calls.filters.phoneNumber ?? 'Phone Number'}
+              value={filters.phoneNumber}
+              onChange={(event) =>
+                setFilters((prev) => ({ ...prev, phoneNumber: event.target.value }))
+              }
+            />
+            <Select
+              value={filters.agentId}
+              onValueChange={(value) => setFilters((prev) => ({ ...prev, agentId: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={dictionary.calls.filters.agent ?? 'Agent'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{dictionary.calls.filters.allAgents ?? 'All Agents'}</SelectItem>
+                {agents.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.providerId}
+              onValueChange={(value) => setFilters((prev) => ({ ...prev, providerId: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={dictionary.calls.filters.provider ?? 'Provider'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{dictionary.calls.filters.allProviders ?? 'All Providers'}</SelectItem>
+                {providers.map((provider) => (
+                  <SelectItem key={provider.id} value={provider.id}>
+                    {provider.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.callType}
+              onValueChange={(value) => setFilters((prev) => ({ ...prev, callType: value as typeof filters.callType }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={dictionary.calls.filters.callType ?? 'Call Type'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{dictionary.calls.filters.allTypes ?? 'All Types'}</SelectItem>
+                <SelectItem value="inbound">{dictionary.calls.filters.inbound ?? 'Inbound'}</SelectItem>
+                <SelectItem value="outbound">{dictionary.calls.filters.outbound ?? 'Outbound'}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={filters.status}
+              onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value as typeof filters.status }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={dictionary.calls.filters.status ?? 'Status'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{dictionary.calls.filters.allStatuses ?? 'All Statuses'}</SelectItem>
+                <SelectItem value="in_progress">{dictionary.calls.filters.inProgress ?? 'In Progress'}</SelectItem>
+                <SelectItem value="completed">{dictionary.calls.filters.completed ?? 'Completed'}</SelectItem>
+                <SelectItem value="failed">{dictionary.calls.filters.failed ?? 'Failed'}</SelectItem>
+              </SelectContent>
+            </Select>
             <Input
               type="date"
               value={filters.startedFrom}
@@ -414,6 +620,11 @@ export default function CallsPage() {
                   uuid: '',
                   startedFrom: '',
                   startedTo: '',
+                  agentId: 'all',
+                  providerId: 'all',
+                  callType: 'all' as const,
+                  status: 'all' as const,
+                  phoneNumber: '',
                 };
                 setFilters(cleared);
                 setPagination((prev) => ({ ...prev, page: 1 }));
@@ -435,10 +646,6 @@ export default function CallsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{dictionary.calls.table.uuid}</TableHead>
-                    <TableHead>{dictionary.calls.table.from}</TableHead>
-                    <TableHead>{dictionary.calls.table.to}</TableHead>
-                    <TableHead>{dictionary.calls.table.recording}</TableHead>
                     <TableHead>
                       <Button
                         type="button"
@@ -447,96 +654,106 @@ export default function CallsPage() {
                         onClick={() => toggleSort('startedAt')}
                         className="h-7 px-2"
                       >
-                        {dictionary.calls.table.startedAt}
+                        {dictionary.calls.table.date ?? 'Date'}
                         <ArrowUpDown className="ml-2 h-3 w-3" />
                       </Button>
                     </TableHead>
-                    <TableHead>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleSort('endedAt')}
-                        className="h-7 px-2"
-                      >
-                        {dictionary.calls.table.endedAt}
-                        <ArrowUpDown className="ml-2 h-3 w-3" />
-                      </Button>
-                    </TableHead>
+                    <TableHead>{dictionary.calls.table.time ?? 'Time'}</TableHead>
+                    <TableHead>{dictionary.calls.table.callId ?? 'Call ID'}</TableHead>
+                    <TableHead>{dictionary.calls.table.phoneFrom ?? 'From'}</TableHead>
+                    <TableHead>{dictionary.calls.table.phoneTo ?? 'To'}</TableHead>
+                    <TableHead>{dictionary.calls.table.agentName ?? 'Agent'}</TableHead>
+                    <TableHead>{dictionary.calls.table.callType ?? 'Type'}</TableHead>
+                    <TableHead>{dictionary.calls.table.provider ?? 'Provider'}</TableHead>
                     <TableHead>{dictionary.calls.table.duration}</TableHead>
-                    <TableHead>{dictionary.calls.table.status}</TableHead>
+                    <TableHead>{dictionary.calls.table.endReason ?? 'End Reason'}</TableHead>
+                    <TableHead>{dictionary.calls.table.cost ?? 'Cost'}</TableHead>
+                    <TableHead>{dictionary.calls.table.recording}</TableHead>
                     <TableHead className="text-right">{dictionary.calls.table.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {calls.map((call) => (
                     <TableRow key={call.id}>
+                      <TableCell className="text-sm">{formatDate(call.startedAt)}</TableCell>
+                      <TableCell className="text-sm">{formatTime(call.startedAt)}</TableCell>
                       <TableCell
-                        className="max-w-[140px] truncate font-mono text-xs text-muted-foreground"
+                        className="max-w-[100px] truncate font-mono text-xs text-muted-foreground"
                         title={call.uuid}
                       >
-                        {call.uuid}
+                        {call.uuid.substring(0, 8)}...
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         <span
-                          className="block max-w-[120px] truncate"
-                          title={callInitiatedMap[call.id]?.from ?? '—'}
+                          className="block max-w-[100px] truncate"
+                          title={call.fromNumber ?? '—'}
                         >
-                          {callInitiatedMap[call.id]?.from ?? '—'}
+                          {call.fromNumber ?? '—'}
                         </span>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         <span
-                          className="block max-w-[120px] truncate"
-                          title={callInitiatedMap[call.id]?.to ?? '—'}
+                          className="block max-w-[100px] truncate"
+                          title={call.toNumber ?? '—'}
                         >
-                          {callInitiatedMap[call.id]?.to ?? '—'}
+                          {call.toNumber ?? '—'}
                         </span>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {call.agentName ?? call.agentId ?? '—'}
+                      </TableCell>
+                      <TableCell>{getCallTypeBadge(call.callType)}</TableCell>
+                      <TableCell className="text-sm">
+                        {call.providerName ?? '—'}
+                      </TableCell>
+                      <TableCell className="text-sm">{formatDuration(call.startedAt, call.endedAt)}</TableCell>
+                      <TableCell>{getEndReasonBadge(call.endReason, call.endedAt)}</TableCell>
+                      <TableCell className="text-sm">
+                        {call.cost != null ? `$${Number(call.cost).toFixed(2)}` : '—'}
                       </TableCell>
                       <TableCell>
                         {recordingAvailableById[call.id] ? (
-                          audioMap[call.id] ? (
-                            <audio controls src={audioMap[call.id]} className="h-8 w-full" />
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handlePlay(call)}
-                              disabled={loadingAudioId === call.id}
-                              aria-label={dictionary.calls.buttons.listen}
-                            >
-                              <Play className="h-4 w-4" />
-                            </Button>
-                          )
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handlePlay(call)}
+                            disabled={loadingAudioId === call.id}
+                            aria-label={dictionary.calls.buttons.listen}
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
                         ) : (
                           '—'
                         )}
                       </TableCell>
-                      <TableCell>{formatDateTime(call.startedAt)}</TableCell>
-                      <TableCell>{formatDateTime(call.endedAt)}</TableCell>
-                      <TableCell>{formatDuration(call.startedAt, call.endedAt)}</TableCell>
-                      <TableCell>
-                        {isCompleted(call)
-                          ? dictionary.calls.events.call_ended
-                          : dictionary.calls.events.call_started}
-                      </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
-                            variant="outline"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openTranscript(call)}
+                            aria-label={dictionary.calls.transcript?.button ?? 'Transcript'}
+                            title={dictionary.calls.transcript?.button ?? 'Transcript'}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => openDetails(call.id)}
                             aria-label={dictionary.calls.buttons.view}
+                            title={dictionary.calls.buttons.view}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
                           {recordingAvailableById[call.id] ? (
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
                               onClick={() => handleDownload(call)}
                               disabled={downloadingId === call.id}
                               aria-label={dictionary.calls.buttons.download}
+                              title={dictionary.calls.buttons.download}
                             >
                               <Download className="h-4 w-4" />
                             </Button>
@@ -639,6 +856,49 @@ export default function CallsPage() {
               {dictionary.calls.buttons.close}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <TranscriptDialog
+        open={transcriptOpen}
+        onOpenChange={setTranscriptOpen}
+        callId={transcriptCallId}
+        callUuid={transcriptCallUuid}
+        dictionary={{
+          title: dictionary.calls.transcript?.title ?? 'Call Transcript',
+          user: dictionary.calls.transcript?.user ?? 'Customer',
+          agent: dictionary.calls.transcript?.agent ?? 'Agent',
+          empty: dictionary.calls.transcript?.empty ?? 'No transcript available for this call.',
+        }}
+      />
+
+      <Dialog open={playerOpen} onOpenChange={setPlayerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{dictionary.calls.buttons.listen}</DialogTitle>
+            <DialogDescription className="font-mono text-xs">
+              {playerCallUuid}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-6">
+            {playerCallId && loadingAudioId === playerCallId ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                Loading...
+              </div>
+            ) : playerCallId && audioMap[playerCallId] ? (
+              <audio
+                controls
+                autoPlay
+                src={audioMap[playerCallId]}
+                className="w-full"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {dictionary.calls.errors.play}
+              </p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </motion.div>

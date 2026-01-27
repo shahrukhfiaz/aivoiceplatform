@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PlusCircle, Pencil, Trash2, Shield, Eye, EyeOff } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, Shield, Eye, EyeOff, PhoneIncoming, PhoneOutgoing } from 'lucide-react';
 import { apiFetch, ApiError, type PaginatedResponse } from '@/lib/api';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
@@ -14,6 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +28,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -50,7 +53,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const TRANSPORT_OPTIONS = ['udp', 'tcp'] as const;
+const DIRECTION_OPTIONS = ['inbound', 'outbound'] as const;
+type DirectionValue = (typeof DIRECTION_OPTIONS)[number];
+
+const TRANSPORT_OPTIONS = ['udp', 'tcp', 'tls', 'wss'] as const;
 type TransportValue = (typeof TRANSPORT_OPTIONS)[number];
 const DEFAULT_TRANSPORT: TransportValue = 'udp';
 const CODECS_DEFAULT = 'ulaw,alaw';
@@ -73,6 +79,11 @@ const makeTrunkSchema = (dict: Dictionary) =>
       .string()
       .min(2, dict.trunks.validation.nameMin)
       .max(50, dict.trunks.validation.nameMax),
+    direction: z.enum(DIRECTION_OPTIONS),
+    host: z.string().optional(),
+    port: z.number().int().min(1).max(65535).optional(),
+    username: z.string().optional(),
+    password: z.string().optional(),
     transport: z.enum(TRANSPORT_OPTIONS),
     codecs: z
       .string()
@@ -87,6 +98,14 @@ const makeTrunkSchema = (dict: Dictionary) =>
         },
       )
       .transform((val) => normalizeCodecsValue(val)),
+    didNumber: z.string().optional(),
+    agentId: z.string().optional(),
+    allowedIps: z.string().optional(),
+    registerEnabled: z.boolean().optional(),
+    registerInterval: z.number().int().min(30).max(3600).optional(),
+    outboundCallerId: z.string().optional(),
+    recordingEnabled: z.boolean().optional(),
+    denoiseEnabled: z.boolean().optional(),
   });
 
 const isTransportValue = (value: string | undefined): value is TransportValue =>
@@ -95,12 +114,30 @@ const isTransportValue = (value: string | undefined): value is TransportValue =>
 const normalizeTransport = (value?: string): TransportValue =>
   isTransportValue(value) ? value : DEFAULT_TRANSPORT;
 
+interface AgentDto {
+  id: string;
+  name: string;
+}
+
 interface TrunkDto {
   id: string;
   name: string;
+  direction: 'inbound' | 'outbound';
+  host?: string;
+  port: number;
+  username?: string;
   password: string;
   transport: 'udp' | 'tcp' | 'tls' | 'wss';
   codecs?: string;
+  didNumber?: string;
+  agent?: AgentDto | null;
+  agentId?: string | null;
+  allowedIps?: string;
+  registerEnabled: boolean;
+  registerInterval: number;
+  outboundCallerId?: string;
+  recordingEnabled: boolean;
+  denoiseEnabled: boolean;
 }
 
 type TrunkFormValues = z.infer<ReturnType<typeof makeTrunkSchema>>;
@@ -110,6 +147,7 @@ export default function TrunksPage() {
   const { user } = useAuth();
   const trunkSchema = useMemo(() => makeTrunkSchema(dictionary), [dictionary]);
   const [trunks, setTrunks] = useState<TrunkDto[]>([]);
+  const [agents, setAgents] = useState<AgentDto[]>([]);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -133,22 +171,58 @@ export default function TrunksPage() {
   const isReadOnly = user?.role === 'viewer';
   const transportOptions = TRANSPORT_OPTIONS.map((value) => ({
     value,
-    label: dictionary.trunks.transportOptions[value],
+    label: dictionary.trunks.transportOptions[value] || value.toUpperCase(),
   }));
   const formatTransport = (value: TrunkDto['transport']) => {
     const labels = dictionary.trunks.transportOptions as Record<string, string>;
     return labels[value] ?? value.toUpperCase();
   };
 
+  const defaultFormValues: TrunkFormValues = {
+    name: '',
+    direction: 'inbound',
+    host: '',
+    port: 5060,
+    username: '',
+    password: '',
+    transport: DEFAULT_TRANSPORT,
+    codecs: CODECS_DEFAULT,
+    didNumber: '',
+    agentId: '',
+    allowedIps: '',
+    registerEnabled: false,
+    registerInterval: 120,
+    outboundCallerId: '',
+    recordingEnabled: false,
+    denoiseEnabled: true,
+  };
+
   const form = useForm<TrunkFormValues>({
     resolver: zodResolver(trunkSchema),
-    defaultValues: { name: '', transport: DEFAULT_TRANSPORT, codecs: CODECS_DEFAULT },
+    defaultValues: defaultFormValues,
   });
 
   const editForm = useForm<TrunkFormValues>({
     resolver: zodResolver(trunkSchema),
-    defaultValues: { name: '', transport: DEFAULT_TRANSPORT, codecs: CODECS_DEFAULT },
+    defaultValues: defaultFormValues,
   });
+
+  const watchDirection = form.watch('direction');
+  const editWatchDirection = editForm.watch('direction');
+  const watchRegisterEnabled = form.watch('registerEnabled');
+  const editWatchRegisterEnabled = editForm.watch('registerEnabled');
+
+  const loadAgents = useCallback(async () => {
+    try {
+      const data = await apiFetch<PaginatedResponse<AgentDto>>('/agents', {
+        query: { limit: 100 },
+        paginated: true,
+      });
+      setAgents(data.data);
+    } catch (err) {
+      console.error('Failed to load agents:', err);
+    }
+  }, []);
 
   const loadTrunks = useCallback(async () => {
     setLoading(true);
@@ -179,11 +253,12 @@ export default function TrunksPage() {
 
   useEffect(() => {
     loadTrunks();
-  }, [loadTrunks]);
+    loadAgents();
+  }, [loadTrunks, loadAgents]);
 
   const resetForms = () => {
-    form.reset({ name: '', transport: DEFAULT_TRANSPORT, codecs: CODECS_DEFAULT });
-    editForm.reset({ name: '', transport: DEFAULT_TRANSPORT, codecs: CODECS_DEFAULT });
+    form.reset(defaultFormValues);
+    editForm.reset(defaultFormValues);
   };
 
   const onSubmit = async (values: TrunkFormValues) => {
@@ -192,26 +267,41 @@ export default function TrunksPage() {
     }
     setSubmitting(true);
     try {
+      const body: Record<string, unknown> = {
+        name: values.name.trim(),
+        direction: values.direction,
+        transport: values.transport,
+        codecs: values.codecs,
+        recordingEnabled: values.recordingEnabled,
+        denoiseEnabled: values.denoiseEnabled,
+      };
+
+      if (values.direction === 'outbound') {
+        body.host = values.host;
+        body.port = values.port;
+        body.username = values.username;
+        if (values.password) {
+          body.password = values.password;
+        }
+        body.registerEnabled = values.registerEnabled;
+        body.registerInterval = values.registerInterval;
+        body.outboundCallerId = values.outboundCallerId;
+      } else {
+        body.didNumber = values.didNumber;
+        body.agentId = values.agentId || undefined;
+        body.allowedIps = values.allowedIps;
+      }
+
       await apiFetch<TrunkDto>('/trunks', {
         method: 'POST',
-        body: JSON.stringify({
-          name: values.name.trim(),
-          transport: values.transport,
-          codecs: values.codecs,
-        }),
+        body: JSON.stringify(body),
       });
       setDialogOpen(false);
       resetForms();
       await loadTrunks();
     } catch (err) {
       if (err instanceof ApiError) {
-        const messageLower = err.message.toLowerCase();
-        const field: keyof TrunkFormValues = messageLower.includes('transport')
-          ? 'transport'
-          : messageLower.includes('codec')
-            ? 'codecs'
-            : 'name';
-        form.setError(field, { message: err.message });
+        form.setError('name', { message: err.message });
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -230,8 +320,21 @@ export default function TrunksPage() {
     setEditingTrunk(trunk);
     editForm.reset({
       name: trunk.name,
+      direction: trunk.direction,
+      host: trunk.host || '',
+      port: trunk.port || 5060,
+      username: trunk.username || '',
+      password: '',
       transport: normalizeTransport(trunk.transport),
       codecs: normalizeCodecsValue(trunk.codecs),
+      didNumber: trunk.didNumber || '',
+      agentId: trunk.agentId || '',
+      allowedIps: trunk.allowedIps || '',
+      registerEnabled: trunk.registerEnabled,
+      registerInterval: trunk.registerInterval || 120,
+      outboundCallerId: trunk.outboundCallerId || '',
+      recordingEnabled: trunk.recordingEnabled,
+      denoiseEnabled: trunk.denoiseEnabled,
     });
     setEditDialogOpen(true);
   };
@@ -245,13 +348,34 @@ export default function TrunksPage() {
     }
     setUpdating(true);
     try {
+      const body: Record<string, unknown> = {
+        name: values.name.trim(),
+        direction: values.direction,
+        transport: values.transport,
+        codecs: values.codecs,
+        recordingEnabled: values.recordingEnabled,
+        denoiseEnabled: values.denoiseEnabled,
+      };
+
+      if (values.direction === 'outbound') {
+        body.host = values.host;
+        body.port = values.port;
+        body.username = values.username;
+        if (values.password) {
+          body.password = values.password;
+        }
+        body.registerEnabled = values.registerEnabled;
+        body.registerInterval = values.registerInterval;
+        body.outboundCallerId = values.outboundCallerId;
+      } else {
+        body.didNumber = values.didNumber;
+        body.agentId = values.agentId || null;
+        body.allowedIps = values.allowedIps;
+      }
+
       await apiFetch<TrunkDto>(`/trunks/${editingTrunk.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({
-          name: values.name.trim(),
-          transport: values.transport,
-          codecs: values.codecs,
-        }),
+        body: JSON.stringify(body),
       });
       setEditDialogOpen(false);
       setEditingTrunk(null);
@@ -259,13 +383,7 @@ export default function TrunksPage() {
       await loadTrunks();
     } catch (err) {
       if (err instanceof ApiError) {
-        const messageLower = err.message.toLowerCase();
-        const field: keyof TrunkFormValues = messageLower.includes('transport')
-          ? 'transport'
-          : messageLower.includes('codec')
-            ? 'codecs'
-            : 'name';
-        editForm.setError(field, { message: err.message });
+        editForm.setError('name', { message: err.message });
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -309,6 +427,296 @@ export default function TrunksPage() {
     }
   };
 
+  const renderFormFields = (
+    formInstance: typeof form | typeof editForm,
+    direction: DirectionValue,
+    registerEnabled: boolean | undefined,
+  ) => (
+    <>
+      <FormField
+        control={formInstance.control}
+        name="name"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{dictionary.trunks.fields.name}</FormLabel>
+            <FormControl>
+              <Input placeholder="e.g., telnyx-trunk" autoComplete="off" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={formInstance.control}
+        name="direction"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{dictionary.trunks.fields.direction}</FormLabel>
+            <FormControl>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder={dictionary.trunks.placeholders.direction} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inbound">
+                    <div className="flex items-center gap-2">
+                      <PhoneIncoming className="h-4 w-4" />
+                      {dictionary.trunks.directions.inbound}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="outbound">
+                    <div className="flex items-center gap-2">
+                      <PhoneOutgoing className="h-4 w-4" />
+                      {dictionary.trunks.directions.outbound}
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {direction === 'outbound' ? (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={formInstance.control}
+              name="host"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{dictionary.trunks.fields.host}</FormLabel>
+                  <FormControl>
+                    <Input placeholder={dictionary.trunks.placeholders.host} autoComplete="off" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={formInstance.control}
+              name="port"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{dictionary.trunks.fields.port}</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="5060" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={formInstance.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{dictionary.trunks.fields.username}</FormLabel>
+                  <FormControl>
+                    <Input placeholder={dictionary.trunks.placeholders.username} autoComplete="off" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={formInstance.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{dictionary.trunks.fields.password}</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder={dictionary.trunks.placeholders.password} autoComplete="new-password" {...field} />
+                  </FormControl>
+                  <FormDescription>{dictionary.trunks.placeholders.passwordHint}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={formInstance.control}
+            name="outboundCallerId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{dictionary.trunks.fields.outboundCallerId}</FormLabel>
+                <FormControl>
+                  <Input placeholder={dictionary.trunks.placeholders.outboundCallerId} autoComplete="off" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={formInstance.control}
+            name="registerEnabled"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <FormLabel>{dictionary.trunks.fields.registerEnabled}</FormLabel>
+                  <FormDescription>{dictionary.trunks.placeholders.registerEnabledHint}</FormDescription>
+                </div>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          {registerEnabled && (
+            <FormField
+              control={formInstance.control}
+              name="registerInterval"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{dictionary.trunks.fields.registerInterval}</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="120" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </>
+      ) : (
+        <>
+          <FormField
+            control={formInstance.control}
+            name="didNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{dictionary.trunks.fields.didNumber}</FormLabel>
+                <FormControl>
+                  <Input placeholder={dictionary.trunks.placeholders.didNumber} autoComplete="off" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={formInstance.control}
+            name="agentId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{dictionary.trunks.fields.agent}</FormLabel>
+                <FormControl>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={dictionary.trunks.placeholders.agent} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={formInstance.control}
+            name="allowedIps"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{dictionary.trunks.fields.allowedIps}</FormLabel>
+                <FormControl>
+                  <Input placeholder={dictionary.trunks.placeholders.allowedIps} autoComplete="off" {...field} />
+                </FormControl>
+                <FormDescription>{dictionary.trunks.placeholders.allowedIpsHint}</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </>
+      )}
+
+      <FormField
+        control={formInstance.control}
+        name="transport"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{dictionary.trunks.fields.transport}</FormLabel>
+            <FormControl>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder={dictionary.trunks.placeholders.transport} />
+                </SelectTrigger>
+                <SelectContent>
+                  {transportOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={formInstance.control}
+        name="codecs"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{dictionary.trunks.fields.codecs}</FormLabel>
+            <FormControl>
+              <Input placeholder={dictionary.trunks.placeholders.codecs} autoComplete="off" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <div className="grid grid-cols-2 gap-4">
+        <FormField
+          control={formInstance.control}
+          name="recordingEnabled"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>{dictionary.trunks.fields.recordingEnabled}</FormLabel>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={formInstance.control}
+          name="denoiseEnabled"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>{dictionary.trunks.fields.denoiseEnabled}</FormLabel>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
+    </>
+  );
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -327,67 +735,14 @@ export default function TrunksPage() {
                 <PlusCircle className="mr-2 h-4 w-4" /> {dictionary.trunks.new}
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[520px]">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{dictionary.trunks.createTitle}</DialogTitle>
                 <DialogDescription>{dictionary.trunks.createDescription}</DialogDescription>
               </DialogHeader>
               <Form {...form}>
                 <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{dictionary.trunks.fields.name}</FormLabel>
-                        <FormControl>
-                          <Input placeholder="es. company-trunk" autoComplete="off" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="transport"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{dictionary.trunks.fields.transport}</FormLabel>
-                        <FormControl>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger>
-                              <SelectValue placeholder={dictionary.trunks.placeholders.transport} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {transportOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="codecs"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{dictionary.trunks.fields.codecs}</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={dictionary.trunks.placeholders.codecs}
-                            autoComplete="off"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {renderFormFields(form, watchDirection, watchRegisterEnabled)}
                   <DialogFooter>
                     <Button type="submit" disabled={submitting || isReadOnly}>
                       {submitting ? dictionary.trunks.buttons.creating : dictionary.trunks.buttons.create}
@@ -417,9 +772,10 @@ export default function TrunksPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{dictionary.trunks.table.name}</TableHead>
+                    <TableHead>{dictionary.trunks.table.direction}</TableHead>
+                    <TableHead>{dictionary.trunks.table.hostOrDid}</TableHead>
+                    <TableHead>{dictionary.trunks.table.agent}</TableHead>
                     <TableHead>{dictionary.trunks.table.transport}</TableHead>
-                    <TableHead>{dictionary.trunks.table.codecs}</TableHead>
-                    <TableHead>{dictionary.trunks.table.username}</TableHead>
                     <TableHead>{dictionary.trunks.table.password}</TableHead>
                     <TableHead className="text-right">{dictionary.trunks.table.actions}</TableHead>
                   </TableRow>
@@ -429,18 +785,30 @@ export default function TrunksPage() {
                     <TableRow key={trunk.id}>
                       <TableCell className="font-medium">{trunk.name}</TableCell>
                       <TableCell>
+                        <Badge variant={trunk.direction === 'inbound' ? 'default' : 'secondary'}>
+                          {trunk.direction === 'inbound' ? (
+                            <PhoneIncoming className="mr-1 h-3 w-3" />
+                          ) : (
+                            <PhoneOutgoing className="mr-1 h-3 w-3" />
+                          )}
+                          {dictionary.trunks.directions[trunk.direction]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <code className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
+                          {trunk.direction === 'inbound' ? trunk.didNumber || '-' : trunk.host || '-'}
+                        </code>
+                      </TableCell>
+                      <TableCell>
+                        {trunk.direction === 'inbound' && trunk.agent ? (
+                          <span className="text-sm">{trunk.agent.name}</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <code className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
                           {formatTransport(trunk.transport)}
-                        </code>
-                      </TableCell>
-                      <TableCell>
-                        <code className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
-                          {normalizeCodecsValue(trunk.codecs)}
-                        </code>
-                      </TableCell>
-                      <TableCell>
-                        <code className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
-                          {trunk.id}
                         </code>
                       </TableCell>
                       <TableCell>
@@ -518,67 +886,14 @@ export default function TrunksPage() {
       </Card>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[520px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{dictionary.trunks.editTitle}</DialogTitle>
             <DialogDescription>{dictionary.trunks.editDescription}</DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
             <form className="space-y-4" onSubmit={editForm.handleSubmit(handleUpdate)}>
-              <FormField
-                control={editForm.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{dictionary.trunks.fields.name}</FormLabel>
-                    <FormControl>
-                      <Input placeholder="es. company-trunk" autoComplete="off" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="transport"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{dictionary.trunks.fields.transport}</FormLabel>
-                    <FormControl>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={dictionary.trunks.placeholders.transport} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {transportOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="codecs"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{dictionary.trunks.fields.codecs}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={dictionary.trunks.placeholders.codecs}
-                        autoComplete="off"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {renderFormFields(editForm, editWatchDirection, editWatchRegisterEnabled)}
               <DialogFooter>
                 <Button type="submit" disabled={updating || isReadOnly}>
                   {updating ? dictionary.trunks.buttons.updating : dictionary.trunks.buttons.update}

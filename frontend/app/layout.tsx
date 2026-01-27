@@ -7,8 +7,8 @@ import { BrandingProvider } from '@/lib/branding';
 import { PublicEnvScript } from 'next-runtime-env';
 
 export const metadata: Metadata = {
-  title: 'AVR Admin',
-  description: 'Pannello di amministrazione per agenti e provider AVR',
+  title: 'Admin Panel',
+  description: 'Administration panel',
 };
 
 export default function RootLayout({

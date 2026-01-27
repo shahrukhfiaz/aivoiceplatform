@@ -12,7 +12,7 @@ import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ServerCog, Pencil, Trash2, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { ServerCog, Pencil, Trash2, Shield, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { apiFetch, ApiError, type PaginatedResponse } from '@/lib/api';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
@@ -293,6 +293,12 @@ export default function ProvidersPage() {
           placeholder: 'your-deepgram-api-key',
           required: true,
           inputType: 'password',
+        },
+        {
+          key: 'DEEPGRAM_PROJECT_ID',
+          label: dictionary.providers.fieldsExtra.deepgramProjectId,
+          placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+          required: true,
         },
         {
           key: 'DEEPGRAM_GREETING',
@@ -683,7 +689,11 @@ export default function ProvidersPage() {
       }
     }, [selectedTemplate, form, resetImageOnTemplateChange]);
 
-    return { filteredTemplates, selectedTemplate };
+    const resetSkip = useCallback(() => {
+      initialPopulateRef.current = true;
+    }, []);
+
+    return { filteredTemplates, selectedTemplate, resetSkip };
   };
 
   const [providers, setProviders] = useState<ProviderDto[]>([]);
@@ -707,6 +717,7 @@ export default function ProvidersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showAdvancedEdit, setShowAdvancedEdit] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
 
   const defaultType: ProviderType = 'STS';
   const defaultTemplate = providerTemplates.find((tpl) => tpl.type === defaultType);
@@ -735,7 +746,7 @@ export default function ProvidersPage() {
 
   const { filteredTemplates: createTemplates, selectedTemplate: createSelectedTemplate } =
     useProviderTemplateController(form, { resetImageOnTemplateChange: true });
-  const { filteredTemplates: editTemplates, selectedTemplate: editSelectedTemplate } =
+  const { filteredTemplates: editTemplates, selectedTemplate: editSelectedTemplate, resetSkip: resetEditSkip } =
     useProviderTemplateController(editForm, { skipInitialPopulate: true });
 
   const loadProviders = useCallback(async () => {
@@ -808,6 +819,8 @@ export default function ProvidersPage() {
     }
     setError(null);
     setEditingProvider(provider);
+    setVisiblePasswords({});
+    resetEditSkip();
     editForm.reset(providerToFormValues(provider));
     setEditDialogOpen(true);
   };
@@ -895,7 +908,12 @@ export default function ProvidersPage() {
             {dictionary.providers.notices.readOnly}
           </div>
         ) : (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (open) {
+              setVisiblePasswords({});
+            }
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <ServerCog className="mr-2 h-4 w-4" /> {dictionary.providers.buttons.new}
@@ -1039,9 +1057,35 @@ export default function ProvidersPage() {
                                             ))}
                                           </SelectContent>
                                         </Select>
+                                      ) : fieldConfig.inputType === 'password' ? (
+                                        <div className="relative">
+                                          <Input
+                                            type={visiblePasswords[fieldConfig.key] ? 'text' : 'password'}
+                                            placeholder={fieldConfig.placeholder}
+                                            {...field}
+                                            value={field.value ?? ''}
+                                            className="pr-10"
+                                          />
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                            onClick={() => setVisiblePasswords(prev => ({
+                                              ...prev,
+                                              [fieldConfig.key]: !prev[fieldConfig.key]
+                                            }))}
+                                          >
+                                            {visiblePasswords[fieldConfig.key] ? (
+                                              <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                            ) : (
+                                              <Eye className="h-4 w-4 text-muted-foreground" />
+                                            )}
+                                          </Button>
+                                        </div>
                                       ) : (
                                         <Input
-                                          type={fieldConfig.inputType === 'password' ? 'password' : 'text'}
+                                          type="text"
                                           placeholder={fieldConfig.placeholder}
                                           {...field}
                                           value={field.value ?? ''}
@@ -1103,9 +1147,35 @@ export default function ProvidersPage() {
                                                     ))}
                                                   </SelectContent>
                                                 </Select>
+                                              ) : fieldConfig.inputType === 'password' ? (
+                                                <div className="relative">
+                                                  <Input
+                                                    type={visiblePasswords[fieldConfig.key] ? 'text' : 'password'}
+                                                    placeholder={fieldConfig.placeholder}
+                                                    {...field}
+                                                    value={field.value ?? ''}
+                                                    className="pr-10"
+                                                  />
+                                                  <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                                    onClick={() => setVisiblePasswords(prev => ({
+                                                      ...prev,
+                                                      [fieldConfig.key]: !prev[fieldConfig.key]
+                                                    }))}
+                                                  >
+                                                    {visiblePasswords[fieldConfig.key] ? (
+                                                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                    ) : (
+                                                      <Eye className="h-4 w-4 text-muted-foreground" />
+                                                    )}
+                                                  </Button>
+                                                </div>
                                               ) : (
                                                 <Input
-                                                  type={fieldConfig.inputType === 'password' ? 'password' : 'text'}
+                                                  type="text"
                                                   placeholder={fieldConfig.placeholder}
                                                   {...field}
                                                   value={field.value ?? ''}
@@ -1123,7 +1193,7 @@ export default function ProvidersPage() {
                             )}
                           </>
                         );
-                      }, [createSelectedTemplate, showAdvanced, form])}
+                      }, [createSelectedTemplate, showAdvanced, form, visiblePasswords])}
                     </div>
                   ) : null}
                 </div>
@@ -1362,9 +1432,35 @@ export default function ProvidersPage() {
                                           ))}
                                         </SelectContent>
                                       </Select>
+                                    ) : fieldConfig.inputType === 'password' ? (
+                                      <div className="relative">
+                                        <Input
+                                          type={visiblePasswords[`edit_${fieldConfig.key}`] ? 'text' : 'password'}
+                                          placeholder={fieldConfig.placeholder}
+                                          {...field}
+                                          value={field.value ?? ''}
+                                          className="pr-10"
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                          onClick={() => setVisiblePasswords(prev => ({
+                                            ...prev,
+                                            [`edit_${fieldConfig.key}`]: !prev[`edit_${fieldConfig.key}`]
+                                          }))}
+                                        >
+                                          {visiblePasswords[`edit_${fieldConfig.key}`] ? (
+                                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                          ) : (
+                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                          )}
+                                        </Button>
+                                      </div>
                                     ) : (
                                       <Input
-                                        type={fieldConfig.inputType === 'password' ? 'password' : 'text'}
+                                        type="text"
                                         placeholder={fieldConfig.placeholder}
                                         {...field}
                                         value={field.value ?? ''}
@@ -1424,9 +1520,35 @@ export default function ProvidersPage() {
                                                   ))}
                                                 </SelectContent>
                                               </Select>
+                                            ) : fieldConfig.inputType === 'password' ? (
+                                              <div className="relative">
+                                                <Input
+                                                  type={visiblePasswords[`edit_${fieldConfig.key}`] ? 'text' : 'password'}
+                                                  placeholder={fieldConfig.placeholder}
+                                                  {...field}
+                                                  value={field.value ?? ''}
+                                                  className="pr-10"
+                                                />
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                                  onClick={() => setVisiblePasswords(prev => ({
+                                                    ...prev,
+                                                    [`edit_${fieldConfig.key}`]: !prev[`edit_${fieldConfig.key}`]
+                                                  }))}
+                                                >
+                                                  {visiblePasswords[`edit_${fieldConfig.key}`] ? (
+                                                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                  ) : (
+                                                    <Eye className="h-4 w-4 text-muted-foreground" />
+                                                  )}
+                                                </Button>
+                                              </div>
                                             ) : (
                                               <Input
-                                                type={fieldConfig.inputType === 'password' ? 'password' : 'text'}
+                                                type="text"
                                                 placeholder={fieldConfig.placeholder}
                                                 {...field}
                                                 value={field.value ?? ''}
@@ -1444,7 +1566,7 @@ export default function ProvidersPage() {
                           )}
                         </>
                       );
-                      }, [editSelectedTemplate, showAdvancedEdit, editForm])}
+                      }, [editSelectedTemplate, showAdvancedEdit, editForm, visiblePasswords])}
                   </div>
                 ) : null}
               </div>

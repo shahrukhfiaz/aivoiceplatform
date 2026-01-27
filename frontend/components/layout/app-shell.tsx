@@ -19,6 +19,9 @@ import {
   X,
   Download,
   Settings,
+  Key,
+  Book,
+  HelpCircle,
   type LucideIcon,
 } from "lucide-react";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
@@ -68,13 +71,6 @@ export function AppShell({ children }: PropsWithChildren) {
   const webRtcClientUrl = env("NEXT_PUBLIC_WEBRTC_CLIENT_URL");
   const [isPhoneOpen, setIsPhoneOpen] = useState(false);
 
-  // Update document title when branding changes
-  useEffect(() => {
-    if (branding?.appName) {
-      document.title = branding.appName;
-    }
-  }, [branding]);
-
   const navPrimaryItems = useMemo<NavItem[]>(
     () => [
       {
@@ -115,11 +111,26 @@ export function AppShell({ children }: PropsWithChildren) {
     [dictionary]
   );
 
+  const navDeveloperItems = useMemo<NavItem[]>(
+    () => [
+      { href: "/api-keys", label: dictionary.navigation.apiKeys || "API Keys", icon: Key },
+      { href: "/api-reference", label: dictionary.navigation.apiReference || "API Reference", icon: Book },
+    ],
+    [dictionary]
+  );
+
   const navObserveItems = useMemo<NavItem[]>(
     () => [
       { href: "/calls", label: dictionary.navigation.calls, icon: PhoneCall },
       { href: "/recordings", label: dictionary.navigation.recordings, icon: Download },
       { href: "/dockers", label: dictionary.navigation.dockers, icon: Server },
+    ],
+    [dictionary]
+  );
+
+  const navHelpItems = useMemo<NavItem[]>(
+    () => [
+      { href: "/guide", label: dictionary.navigation.guide || "User Guide", icon: HelpCircle },
     ],
     [dictionary]
   );
@@ -132,7 +143,9 @@ export function AppShell({ children }: PropsWithChildren) {
         navBuildItems={navBuildItems}
         navTelephonyItems={navTelephonyItems}
         navAdministrationItems={navAdministrationItems}
+        navDeveloperItems={navDeveloperItems}
         navObserveItems={navObserveItems}
+        navHelpItems={navHelpItems}
         userName={user?.username ?? ""}
         userRole={user?.role ?? ""}
         onLogout={logout}
@@ -154,6 +167,8 @@ type AppShellContentProps = {
   navBuildItems: NavItem[];
   navTelephonyItems: NavItem[];
   navAdministrationItems: NavItem[];
+  navDeveloperItems: NavItem[];
+  navHelpItems: NavItem[];
   userName: string;
   userRole: string;
   onLogout: () => void;
@@ -171,7 +186,9 @@ function AppShellContent({
   navBuildItems,
   navTelephonyItems,
   navAdministrationItems,
+  navDeveloperItems,
   navObserveItems,
+  navHelpItems,
   userName,
   userRole,
   onLogout,
@@ -193,6 +210,7 @@ function AppShellContent({
     ? navTelephonyItems.filter((item) => item.href !== "/trunks")
     : navTelephonyItems;
   const displayednavObserveItems = isViewer ? navObserveItems : navObserveItems;
+  const displayednavDeveloperItems = navDeveloperItems;
 
   const handleNavigate = () => {
     if (isMobile) {
@@ -330,6 +348,35 @@ function AppShellContent({
                 </SidebarGroupContent>
               </SidebarGroup>
             ) : null}
+            {displayednavDeveloperItems.length > 0 ? (
+              <SidebarGroup className="gap-3">
+                <SidebarGroupLabel>
+                  {dictionary.sidebarGroups.developer || "Developer"}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {displayednavDeveloperItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = pathname.startsWith(item.href);
+                      return (
+                        <SidebarMenuItem key={item.href}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            className="flex items-center gap-3"
+                          >
+                            <Link href={item.href} onClick={handleNavigate}>
+                              <Icon className="h-4 w-4" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ) : null}
             {displayednavObserveItems.length > 0 ? (
               <SidebarGroup className="gap-3">
                 <SidebarGroupLabel>
@@ -338,6 +385,35 @@ function AppShellContent({
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {displayednavObserveItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = pathname.startsWith(item.href);
+                      return (
+                        <SidebarMenuItem key={item.href}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            className="flex items-center gap-3"
+                          >
+                            <Link href={item.href} onClick={handleNavigate}>
+                              <Icon className="h-4 w-4" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ) : null}
+            {navHelpItems.length > 0 ? (
+              <SidebarGroup className="gap-3">
+                <SidebarGroupLabel>
+                  {dictionary.sidebarGroups.help || "Help"}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {navHelpItems.map((item) => {
                       const Icon = item.icon;
                       const isActive = pathname.startsWith(item.href);
                       return (
