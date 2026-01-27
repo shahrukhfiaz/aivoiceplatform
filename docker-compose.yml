@@ -119,8 +119,16 @@ services:
       - "traefik.http.routers.phone.tls.certresolver=letsencrypt"
       - "traefik.http.routers.phone.middlewares=phone-rewrite"
       - "traefik.http.middlewares.phone-rewrite.replacepath.path=/"
+      # Phone HTML route (/phone -> index.html)
+      - "traefik.http.routers.phone-html.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && Path(`/phone`)"
+      - "traefik.http.routers.phone-html.entrypoints=websecure"
+      - "traefik.http.routers.phone-html.tls=true"
+      - "traefik.http.routers.phone-html.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.phone-html.middlewares=phone-html-rewrite"
+      - "traefik.http.middlewares.phone-html-rewrite.replacepath.path=/"
+      - "traefik.http.routers.phone-html.priority=100"
       # Phone static assets route (phone.css, phone.js, sw.js, manifest.json, etc.)
-      - "traefik.http.routers.phone-assets.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && (Path(`/phone`) || Path(`/phone.css`) || Path(`/phone.js`) || Path(`/sw.js`) || Path(`/manifest.json`) || PathPrefix(`/assets`))"
+      - "traefik.http.routers.phone-assets.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && (Path(`/phone.css`) || Path(`/phone.js`) || Path(`/sw.js`) || Path(`/manifest.json`) || PathPrefix(`/assets`) || PathPrefix(`/icons`) || PathPrefix(`/lang`) || PathPrefix(`/media`) || PathPrefix(`/avatars`))"
       - "traefik.http.routers.phone-assets.entrypoints=websecure"
       - "traefik.http.routers.phone-assets.tls=true"
       - "traefik.http.routers.phone-assets.tls.certresolver=letsencrypt"
