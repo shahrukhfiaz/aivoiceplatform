@@ -37,6 +37,15 @@ services:
       - "9089:8089"
       - "9090:8090"
       - "10000-10050:10000-10050/udp"
+    labels:
+      - "traefik.enable=true"
+      # WebSocket route for WebRTC SIP
+      - "traefik.http.routers.asterisk-wss.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && Path(`/ws`)"
+      - "traefik.http.routers.asterisk-wss.entrypoints=websecure"
+      - "traefik.http.routers.asterisk-wss.tls=true"
+      - "traefik.http.routers.asterisk-wss.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.asterisk-wss.priority=100"
+      - "traefik.http.services.asterisk-wss.loadbalancer.server.port=8088"
     volumes:
       - ./avr-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
       - ./avr-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
