@@ -1,0 +1,171 @@
+services:
+  traefik:
+    image: traefik:v3.6
+    container_name: traefik
+    restart: always
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - avr
+
+  avr-asterisk:
+    image: agentvoiceresponse/avr-asterisk
+    platform: linux/amd64
+    container_name: avr-asterisk
+    restart: always
+    ports:
+      - "5038:5038"
+      - "5060:5060/udp"
+      - "5060:5060/tcp"
+      - "9088:8088"
+      - "9089:8089"
+      - "9090:8090"
+      - "10000-10050:10000-10050/udp"
+    volumes:
+      - ./avr-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
+      - ./avr-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
+      - ./avr-infra/asterisk/conf/extensions.conf:/etc/asterisk/my_extensions.conf
+      - ./avr-infra/asterisk/conf/queues.conf:/etc/asterisk/my_queues.conf
+      - ./avr-infra/asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
+      - ./avr-infra/asterisk/recordings:/var/spool/asterisk/monitor
+    networks:
+      - avr
+
+  avr-ami:
+    image: agentvoiceresponse/avr-ami
+    platform: linux/amd64
+    container_name: avr-ami
+    restart: always
+    environment:
+      - PORT=6006
+      - AMI_HOST=avr-asterisk
+      - AMI_PORT=5038
+      - AMI_USERNAME=avr
+      - AMI_PASSWORD=avr
+    networks:
+      - avr
+
+  avr-core:
+    image: agentvoiceresponse/avr-core
+    platform: linux/amd64
+    container_name: avr-core
+    restart: always
+    environment:
+      - PORT=5001
+      - WEBHOOK_URL=http://avr-backend:3001/webhooks
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-webhook-secret-change-this}
+    ports:
+      - "5001:5001"
+    networks:
+      - avr
+
+  avr-llm-openai:
+    image: agentvoiceresponse/avr-llm-openai
+    platform: linux/amd64
+    container_name: avr-llm-openai
+    restart: always
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    networks:
+      - avr
+
+  avr-llm-anthropic:
+    image: agentvoiceresponse/avr-llm-anthropic
+    platform: linux/amd64
+    container_name: avr-llm-anthropic
+    restart: always
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    networks:
+      - avr
+
+  avr-tts-deepgram:
+    image: agentvoiceresponse/avr-tts-deepgram
+    platform: linux/amd64
+    container_name: avr-tts-deepgram
+    restart: always
+    environment:
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
+    networks:
+      - avr
+
+  avr-phone:
+    image: agentvoiceresponse/avr-phone
+    platform: linux/amd64
+    container_name: avr-phone
+    restart: always
+    ports:
+      - "9080:80"
+    networks:
+      - avr
+
+  backend:
+    build: ./avr-app/backend
+    container_name: avr-backend
+    restart: always
+    environment:
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-production-change-this}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - WEBHOOK_URL=http://avr-backend:3001/webhooks
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-webhook-secret-change-this}
+      - ARI_URL=http://avr-asterisk:8088/ari
+      - ARI_USERNAME=avr
+      - ARI_PASSWORD=avr
+      - AMI_HOST=avr-asterisk
+      - AMI_PORT=5038
+      - AMI_USERNAME=avr
+      - AMI_PASSWORD=avr
+      - CORE_DEFAULT_IMAGE=agentvoiceresponse/avr-core
+      - DB_TYPE=sqlite
+      - DB_DATABASE=/app/data/data.db
+      - ASTERISK_CONFIG_PATH=/app/asterisk
+      - ASTERISK_MONITOR_PATH=/app/recordings
+      - NETWORK=avr
+    volumes:
+      - ./avr-infra/asterisk/conf:/app/asterisk
+      - ./data:/app/data
+      - ./avr-infra/asterisk/recordings:/app/recordings
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "3001:3001"
+    depends_on:
+      - avr-asterisk
+      - avr-ami
+    networks:
+      - avr
+
+  frontend:
+    build:
+      context: ./avr-app/frontend
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    container_name: avr-frontend
+    restart: always
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      - NEXT_PUBLIC_WEBRTC_CLIENT_URL=${NEXT_PUBLIC_WEBRTC_CLIENT_URL:-http://localhost:9080}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - avr
+
+networks:
+  avr:
+    name: avr
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
