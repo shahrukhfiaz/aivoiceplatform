@@ -8,11 +8,19 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@digitalstorming.com}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
     ports:
       - "80:80"
+      - "443:443"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
     networks:
       - avr
 
@@ -102,8 +110,15 @@ services:
     platform: linux/amd64
     container_name: avr-phone
     restart: always
-    ports:
-      - "9080:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.phone.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && PathPrefix(`/phone`)"
+      - "traefik.http.routers.phone.entrypoints=websecure"
+      - "traefik.http.routers.phone.tls=true"
+      - "traefik.http.routers.phone.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.phone.middlewares=phone-strip"
+      - "traefik.http.middlewares.phone-strip.stripprefix.prefixes=/phone"
+      - "traefik.http.services.phone.loadbalancer.server.port=80"
     networks:
       - avr
 
@@ -114,7 +129,7 @@ services:
     environment:
       - PORT=3001
       - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-production-change-this}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - FRONTEND_URL=${FRONTEND_URL:-https://ai.digitalstorming.com}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
       - WEBHOOK_URL=http://avr-backend:3001/webhooks
@@ -132,13 +147,20 @@ services:
       - ASTERISK_CONFIG_PATH=/app/asterisk
       - ASTERISK_MONITOR_PATH=/app/recordings
       - NETWORK=avr
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls=true"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend.middlewares=backend-strip"
+      - "traefik.http.middlewares.backend-strip.stripprefix.prefixes=/api"
+      - "traefik.http.services.backend.loadbalancer.server.port=3001"
     volumes:
       - ./avr-infra/asterisk/conf:/app/asterisk
       - ./data:/app/data
       - ./avr-infra/asterisk/recordings:/app/recordings
       - /var/run/docker.sock:/var/run/docker.sock
-    ports:
-      - "3001:3001"
     depends_on:
       - avr-asterisk
       - avr-ami
@@ -149,14 +171,19 @@ services:
     build:
       context: ./avr-app/frontend
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://ai.digitalstorming.com/api}
     container_name: avr-frontend
     restart: always
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3001}
-      - NEXT_PUBLIC_WEBRTC_CLIENT_URL=${NEXT_PUBLIC_WEBRTC_CLIENT_URL:-http://localhost:9080}
-    ports:
-      - "3000:3000"
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://ai.digitalstorming.com/api}
+      - NEXT_PUBLIC_WEBRTC_CLIENT_URL=${NEXT_PUBLIC_WEBRTC_CLIENT_URL:-https://ai.digitalstorming.com/phone}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls=true"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     depends_on:
       - backend
     networks:
