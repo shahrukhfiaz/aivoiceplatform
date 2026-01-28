@@ -1,0 +1,24 @@
+{
+  "name": "avr-phone",
+  "version": "1.0.0",
+  "author": "Agent Voice Response <info@agentvoiceresponse.com>",
+  "description": "The official phone of Agent Voice Response",
+  "main": "index.html",
+  "scripts": {
+    "build": "docker build -t avr-phone .",
+    "run": "docker run -p 8080:80 avr-phone"
+  },  
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agentvoiceresponse/avr-phone.git"
+  },
+  "homepage": "https://agentvoiceresponse.com",
+  "contributors": [
+    {
+      "name": "Giuseppe Careri",
+      "email": "info@gcareri.com",
+      "url": "https://github.com/gcareri"
+    }
+  ]
+}
