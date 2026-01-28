@@ -14,6 +14,7 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--serversTransport.forwardingTimeouts.dialTimeout=30s"
     ports:
       - "80:80"
       - "443:443"
@@ -46,6 +47,8 @@ services:
       - "traefik.http.routers.asterisk-wss.tls.certresolver=letsencrypt"
       - "traefik.http.routers.asterisk-wss.priority=100"
       - "traefik.http.services.asterisk-wss.loadbalancer.server.port=8088"
+      # WebSocket response forwarding for streaming
+      - "traefik.http.services.asterisk-wss.loadbalancer.responseForwarding.flushInterval=-1"
     volumes:
       - ./avr-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
       - ./avr-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
