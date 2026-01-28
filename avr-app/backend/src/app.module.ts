@@ -16,6 +16,7 @@ import { RecordingsModule } from './recordings/recordings.module';
 import { BrandingModule } from './branding/branding.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { CallsModule } from './calls/calls.module';
+import { TwilioModule } from './twilio/twilio.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { CallsModule } from './calls/calls.module';
     PhonesModule,
     NumbersModule,
     TrunksModule,
+    TwilioModule,
     WebhooksModule,
     RecordingsModule,
     BrandingModule,

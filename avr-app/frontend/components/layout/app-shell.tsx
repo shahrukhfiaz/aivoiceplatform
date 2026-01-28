@@ -22,6 +22,7 @@ import {
   Key,
   Book,
   HelpCircle,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
@@ -98,6 +99,7 @@ export function AppShell({ children }: PropsWithChildren) {
     () => [
       { href: "/numbers", label: dictionary.navigation.numbers, icon: Hash },
       { href: "/trunks", label: dictionary.navigation.trunks, icon: Shield },
+      { href: "/twilio", label: dictionary.navigation.twilio, icon: Smartphone },
       { href: "/phones", label: dictionary.navigation.phones, icon: Phone },
     ],
     [dictionary]
