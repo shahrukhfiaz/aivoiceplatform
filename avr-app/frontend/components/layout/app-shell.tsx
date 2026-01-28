@@ -125,7 +125,7 @@ export function AppShell({ children }: PropsWithChildren) {
     () => [
       { href: "/calls", label: dictionary.navigation.calls, icon: PhoneCall },
       { href: "/recordings", label: dictionary.navigation.recordings, icon: Download },
-      { href: "/dockers", label: dictionary.navigation.systemResources, icon: Server },
+      { href: "/system-resources", label: dictionary.navigation.systemResources, icon: Server },
     ],
     [dictionary]
   );
