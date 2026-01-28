@@ -29,6 +29,19 @@ export class TwilioController {
     return this.twilioService.create(dto);
   }
 
+  /**
+   * Fetch available phone numbers from a Twilio account
+   * Used when adding a new number to show a list of available numbers
+   * NOTE: This must be defined BEFORE routes with :id parameter
+   */
+  @Post('fetch-numbers')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  fetchAvailableNumbers(
+    @Body() body: { accountSid: string; authToken: string },
+  ): Promise<{ success: boolean; numbers?: Array<{ phoneNumber: string; friendlyName: string; capabilities: { voice: boolean; sms: boolean } }>; error?: string }> {
+    return this.twilioService.fetchAvailableNumbers(body.accountSid, body.authToken);
+  }
+
   @Get()
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.VIEWER)
   findAll(
@@ -73,17 +86,5 @@ export class TwilioController {
     @Param('id') id: string,
   ): Promise<{ success: boolean; error?: string }> {
     return this.twilioService.configureWebhooksById(id);
-  }
-
-  /**
-   * Fetch available phone numbers from a Twilio account
-   * Used when adding a new number to show a list of available numbers
-   */
-  @Post('fetch-numbers')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
-  fetchAvailableNumbers(
-    @Body() body: { accountSid: string; authToken: string },
-  ): Promise<{ success: boolean; numbers?: Array<{ phoneNumber: string; friendlyName: string; capabilities: { voice: boolean; sms: boolean } }>; error?: string }> {
-    return this.twilioService.fetchAvailableNumbers(body.accountSid, body.authToken);
   }
 }
