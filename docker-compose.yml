@@ -183,6 +183,12 @@ services:
       - "traefik.http.routers.backend.middlewares=backend-strip"
       - "traefik.http.middlewares.backend-strip.stripprefix.prefixes=/api/"
       - "traefik.http.services.backend.loadbalancer.server.port=3001"
+      # Twilio webhook router (no prefix stripping needed)
+      - "traefik.http.routers.backend-twilio.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && PathPrefix(`/twilio/`)"
+      - "traefik.http.routers.backend-twilio.entrypoints=websecure"
+      - "traefik.http.routers.backend-twilio.tls=true"
+      - "traefik.http.routers.backend-twilio.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend-twilio.service=backend"
     volumes:
       - ./avr-infra/asterisk/conf:/app/asterisk
       - ./data:/app/data
