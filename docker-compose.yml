@@ -9,6 +9,8 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      # Disable HTTP/2 to allow WebSocket upgrades (WebSocket requires HTTP/1.1)
+      - "--entrypoints.websecure.http2.disabled=true"
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@digitalstorming.com}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
