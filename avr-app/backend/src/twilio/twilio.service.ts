@@ -255,6 +255,64 @@ export class TwilioService {
   }
 
   /**
+   * Fetch available phone numbers from a Twilio account
+   * Returns list of purchased phone numbers with their capabilities
+   */
+  async fetchAvailableNumbers(
+    accountSid: string,
+    authToken: string,
+  ): Promise<{
+    success: boolean;
+    numbers?: Array<{
+      phoneNumber: string;
+      friendlyName: string;
+      capabilities: { voice: boolean; sms: boolean };
+    }>;
+    error?: string;
+  }> {
+    try {
+      const twilio = await import('twilio');
+      const client = twilio.default(accountSid, authToken);
+
+      // Fetch all incoming phone numbers from the account
+      const incomingPhoneNumbers = await client.incomingPhoneNumbers.list({
+        limit: 100, // Fetch up to 100 numbers
+      });
+
+      // Get already configured numbers to filter them out
+      const configuredNumbers = await this.twilioNumberRepository.find({
+        select: ['phoneNumber'],
+      });
+      const configuredSet = new Set(configuredNumbers.map((n) => n.phoneNumber));
+
+      // Map to our response format and filter out already configured numbers
+      const numbers = incomingPhoneNumbers
+        .filter((num) => !configuredSet.has(num.phoneNumber))
+        .map((num) => ({
+          phoneNumber: num.phoneNumber,
+          friendlyName: num.friendlyName || num.phoneNumber,
+          capabilities: {
+            voice: num.capabilities?.voice ?? false,
+            sms: num.capabilities?.sms ?? false,
+          },
+        }));
+
+      this.logger.log(
+        `Fetched ${numbers.length} available phone numbers from Twilio account ${accountSid}`,
+      );
+
+      return { success: true, numbers };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to fetch phone numbers from Twilio: ${errorMessage}`,
+      );
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
    * Configure Twilio webhooks by ID (decrypts auth token from stored entity)
    */
   async configureWebhooksById(

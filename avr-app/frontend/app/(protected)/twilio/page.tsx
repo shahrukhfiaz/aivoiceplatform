@@ -124,6 +124,9 @@ export default function TwilioPage() {
   const [visibleTokens, setVisibleTokens] = useState<Record<string, boolean>>({});
   const [verifying, setVerifying] = useState<Record<string, boolean>>({});
   const [verifyResults, setVerifyResults] = useState<Record<string, { valid: boolean; error?: string }>>({});
+  const [fetchingNumbers, setFetchingNumbers] = useState(false);
+  const [availableNumbers, setAvailableNumbers] = useState<Array<{ phoneNumber: string; friendlyName: string; capabilities: { voice: boolean; sms: boolean } }>>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const isReadOnly = user?.role === 'viewer';
 
@@ -196,6 +199,44 @@ export default function TwilioPage() {
   const resetForms = () => {
     form.reset(defaultFormValues);
     editForm.reset(defaultFormValues);
+    setAvailableNumbers([]);
+    setFetchError(null);
+  };
+
+  const fetchAvailableNumbers = async () => {
+    const accountSid = form.getValues('accountSid');
+    const authToken = form.getValues('authToken');
+
+    if (!accountSid || !authToken) {
+      setFetchError('Please enter Account SID and Auth Token first');
+      return;
+    }
+
+    setFetchingNumbers(true);
+    setFetchError(null);
+    try {
+      const result = await apiFetch<{
+        success: boolean;
+        numbers?: Array<{ phoneNumber: string; friendlyName: string; capabilities: { voice: boolean; sms: boolean } }>;
+        error?: string;
+      }>('/twilio-numbers/fetch-numbers', {
+        method: 'POST',
+        body: JSON.stringify({ accountSid, authToken }),
+      });
+
+      if (result.success && result.numbers) {
+        setAvailableNumbers(result.numbers);
+        if (result.numbers.length === 0) {
+          setFetchError('No available phone numbers found in this Twilio account');
+        }
+      } else {
+        setFetchError(result.error || 'Failed to fetch phone numbers');
+      }
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to fetch phone numbers');
+    } finally {
+      setFetchingNumbers(false);
+    }
   };
 
   const onSubmit = async (values: TwilioFormValues) => {
@@ -361,35 +402,6 @@ export default function TwilioPage() {
     <>
       <FormField
         control={formInstance.control}
-        name="phoneNumber"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{dictionary.twilio.fields.phoneNumber}</FormLabel>
-            <FormControl>
-              <Input placeholder="+14156021922" autoComplete="off" {...field} />
-            </FormControl>
-            <FormDescription>{dictionary.twilio.placeholders.phoneNumberHint}</FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={formInstance.control}
-        name="label"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{dictionary.twilio.fields.label}</FormLabel>
-            <FormControl>
-              <Input placeholder={dictionary.twilio.placeholders.label} autoComplete="off" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={formInstance.control}
         name="accountSid"
         render={({ field }) => (
           <FormItem>
@@ -419,6 +431,102 @@ export default function TwilioPage() {
             {isEdit && (
               <FormDescription>{dictionary.twilio.placeholders.authTokenHint}</FormDescription>
             )}
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {!isEdit && (
+        <div className="space-y-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={fetchAvailableNumbers}
+            disabled={fetchingNumbers}
+            className="w-full"
+          >
+            {fetchingNumbers ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Fetching numbers...
+              </>
+            ) : (
+              'Fetch Available Numbers from Twilio'
+            )}
+          </Button>
+          {fetchError && (
+            <p className="text-sm text-destructive">{fetchError}</p>
+          )}
+          {availableNumbers.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Found {availableNumbers.length} available number(s)
+            </p>
+          )}
+        </div>
+      )}
+
+      <FormField
+        control={formInstance.control}
+        name="phoneNumber"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{dictionary.twilio.fields.phoneNumber}</FormLabel>
+            <FormControl>
+              {!isEdit && availableNumbers.length > 0 ? (
+                <Select
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    // Auto-fill label with friendly name
+                    const selectedNumber = availableNumbers.find(n => n.phoneNumber === value);
+                    if (selectedNumber && !formInstance.getValues('label')) {
+                      formInstance.setValue('label', selectedNumber.friendlyName || value);
+                    }
+                  }}
+                  value={field.value}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a phone number" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableNumbers.map((num) => (
+                      <SelectItem key={num.phoneNumber} value={num.phoneNumber}>
+                        <div className="flex items-center gap-2">
+                          <span>{num.phoneNumber}</span>
+                          {num.friendlyName !== num.phoneNumber && (
+                            <span className="text-muted-foreground">({num.friendlyName})</span>
+                          )}
+                          <div className="flex gap-1 ml-2">
+                            {num.capabilities.voice && (
+                              <Badge variant="outline" className="text-[10px] px-1">Voice</Badge>
+                            )}
+                            {num.capabilities.sms && (
+                              <Badge variant="outline" className="text-[10px] px-1">SMS</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input placeholder="+14156021922" autoComplete="off" {...field} />
+              )}
+            </FormControl>
+            <FormDescription>{dictionary.twilio.placeholders.phoneNumberHint}</FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={formInstance.control}
+        name="label"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{dictionary.twilio.fields.label}</FormLabel>
+            <FormControl>
+              <Input placeholder={dictionary.twilio.placeholders.label} autoComplete="off" {...field} />
+            </FormControl>
             <FormMessage />
           </FormItem>
         )}
