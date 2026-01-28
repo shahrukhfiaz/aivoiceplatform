@@ -94,7 +94,7 @@ export class DockerService {
       User: 'root',
       NetworkingConfig: {
         EndpointsConfig: {
-          avr: {},
+          dsai: {},
         },
       },
       HostConfig: {
@@ -304,7 +304,7 @@ export class DockerService {
   private getDefaultLabels(name: string): Record<string, string> {
     const labels: Record<string, string> = {
       agentName: name,
-      app: 'AVR',
+      app: 'dsai',
     };
     const tenant = process.env.TENANT;
     if (tenant) {
@@ -314,9 +314,9 @@ export class DockerService {
   }
 
   private getDefaultLabelFilters(): string[] {
-    // Only filter by app=AVR to show all AVR containers
+    // Only filter by app=dsai to show all dsai containers
     // Tenant filtering is optional and should not exclude containers without tenant label
-    return ['app=AVR'];
+    return ['app=dsai'];
   }
 
   private async pullImage(image: string): Promise<void> {

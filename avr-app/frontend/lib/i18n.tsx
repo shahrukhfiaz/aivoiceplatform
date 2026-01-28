@@ -14,7 +14,7 @@ import { itDictionary } from './i18n/it';
 
 export type Language = 'it' | 'en';
 
-const LANGUAGE_STORAGE_KEY = 'avr-admin-language';
+const LANGUAGE_STORAGE_KEY = 'dsai-admin-language';
 
 const dictionaries = {
   en: enDictionary,

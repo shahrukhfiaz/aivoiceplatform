@@ -51,8 +51,8 @@ export default function SettingsPage() {
   const form = useForm<BrandingFormValues>({
     resolver: zodResolver(brandingSchema),
     defaultValues: {
-      appName: 'AVR Admin',
-      panelName: 'AVR Admin Panel',
+      appName: 'DSAI Admin',
+      panelName: 'DSAI Admin Panel',
       logoUrl: '',
       faviconUrl: '',
       primaryColor: '',
@@ -64,15 +64,15 @@ export default function SettingsPage() {
       wikiUrl: 'https://wiki.agentvoiceresponse.com/',
       loginTitle: '',
       loginDescription: '',
-      webrtcPhoneTitle: 'AVR Phone',
+      webrtcPhoneTitle: 'DSAI Phone',
     },
   });
 
   useEffect(() => {
     if (branding) {
       form.reset({
-        appName: branding.appName || 'AVR Admin',
-        panelName: branding.panelName || 'AVR Admin Panel',
+        appName: branding.appName || 'DSAI Admin',
+        panelName: branding.panelName || 'DSAI Admin Panel',
         logoUrl: branding.logoUrl || '',
         faviconUrl: branding.faviconUrl || '',
         primaryColor: branding.primaryColor || '',
@@ -84,7 +84,7 @@ export default function SettingsPage() {
         wikiUrl: branding.wikiUrl || 'https://wiki.agentvoiceresponse.com/',
         loginTitle: branding.loginTitle || '',
         loginDescription: branding.loginDescription || '',
-        webrtcPhoneTitle: branding.webrtcPhoneTitle || 'AVR Phone',
+        webrtcPhoneTitle: branding.webrtcPhoneTitle || 'DSAI Phone',
       });
     }
   }, [branding, form]);
@@ -194,7 +194,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel>App Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="AVR Admin" {...field} />
+                      <Input placeholder="DSAI Admin" {...field} />
                     </FormControl>
                     <FormDescription>
                       The name displayed in the browser tab and page titles.
@@ -211,7 +211,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel>Panel Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="AVR Admin Panel" {...field} />
+                      <Input placeholder="DSAI Admin Panel" {...field} />
                     </FormControl>
                     <FormDescription>
                       The name displayed in the sidebar header.
@@ -268,7 +268,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel>WebRTC Phone Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="AVR Phone" {...field} />
+                      <Input placeholder="DSAI Phone" {...field} />
                     </FormControl>
                     <FormDescription>
                       The title displayed on the WebRTC phone panel.

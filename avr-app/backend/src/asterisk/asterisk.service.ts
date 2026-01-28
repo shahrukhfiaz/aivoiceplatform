@@ -40,8 +40,8 @@ export class AsteriskService {
     }
 
     if (!this.ariPromise) {
-      const url = process.env.ARI_URL || 'http://avr-asterisk:8088/ari';
-      const username = process.env.ARI_USERNAME || 'avr';
+      const url = process.env.ARI_URL || 'http://dsai-asterisk:8088/ari';
+      const username = process.env.ARI_USERNAME || 'dsai';
       const password = process.env.ARI_PASSWORD || 'u4lyvcPyQ19hwJKy';
       this.logger.debug(`Connecting to ARI at ${url}`);
       this.ariPromise = Ari.connect(url, username, password)
@@ -326,7 +326,7 @@ export class AsteriskService {
           // Build JSON body with VICIdial data included
           " same => n,Set(JSON_BODY={\"uuid\":\"${UUID}\",\"payload\":{\"from\":\"${CALLERID(num)}\",\"to\":\"${EXTEN}\",\"uniqueid\":\"${UNIQUEID}\",\"channel\":\"${CHANNEL}\",\"recording\":" + recordingEnabled + ",\"vicidial\":{\"leadId\":\"${VICIDIAL_LEAD_ID}\",\"campaignId\":\"${VICIDIAL_CAMPAIGN_ID}\",\"phone\":\"${VICIDIAL_PHONE}\",\"userId\":\"${VICIDIAL_USER}\",\"listId\":\"${VICIDIAL_LIST_ID}\"}}})",
           " same => n,Set(CURLOPT(httpheader)=Content-Type: application/json)",
-          " same => n,Set(JSON_RESPONSE=${CURL(http://avr-core-" + agent.id + ":" + agent.httpPort + "/call,${JSON_BODY})})",
+          " same => n,Set(JSON_RESPONSE=${CURL(http://dsai-core-" + agent.id + ":" + agent.httpPort + "/call,${JSON_BODY})})",
           " same => n,NoOp(JSON_BODY: ${JSON_BODY})",
           " same => n,NoOp(JSON_RESPONSE: ${JSON_RESPONSE})",
           " same => n,GotoIf($[\"${JSON_RESPONSE}\" = \"\"]?skip_http)",
@@ -339,7 +339,7 @@ export class AsteriskService {
           lines.push(' same => n,Set(DENOISE(rx)=on)');
         }
         lines.push(
-          ' same => n,Dial(AudioSocket/avr-core-' +
+          ' same => n,Dial(AudioSocket/dsai-core-' +
             agent.id +
             ':' +
             agent.port +
@@ -526,7 +526,7 @@ export class AsteriskService {
       " same => n,Set(UUID=${SHELL(uuidgen | tr -d '\\n')})",
       ` same => n,Set(JSON_BODY={"uuid":"\${UUID}","payload":{"from":"\${CALLERID(num)}","to":"${trunk.didNumber}","direction":"inbound","trunkId":"${trunk.id}","trunkName":"${trunk.name}"}})`,
       ' same => n,Set(CURLOPT(httpheader)=Content-Type: application/json)',
-      ` same => n,Set(JSON_RESPONSE=\${CURL(http://avr-core-${agent.id}:${agent.httpPort}/call,\${JSON_BODY})})`,
+      ` same => n,Set(JSON_RESPONSE=\${CURL(http://dsai-core-${agent.id}:${agent.httpPort}/call,\${JSON_BODY})})`,
     ];
 
     if (trunk.recordingEnabled) {
@@ -537,7 +537,7 @@ export class AsteriskService {
     }
 
     lines.push(
-      ` same => n,Dial(AudioSocket/avr-core-${agent.id}:${agent.port}/\${UUID})`,
+      ` same => n,Dial(AudioSocket/dsai-core-${agent.id}:${agent.port}/\${UUID})`,
       ' same => n,Hangup()',
     );
 

@@ -58,8 +58,8 @@ export class BrandingService {
    */
   private async createDefault(): Promise<Branding> {
     const branding = this.brandingRepository.create({
-      appName: 'AVR Admin',
-      panelName: 'AVR Admin Panel',
+      appName: 'DSAI Admin',
+      panelName: 'DSAI Admin Panel',
       logoUrl: null,
       faviconUrl: null,
       primaryColor: null,
@@ -71,7 +71,7 @@ export class BrandingService {
       wikiUrl: 'https://wiki.agentvoiceresponse.com/',
       loginTitle: null,
       loginDescription: null,
-      webrtcPhoneTitle: 'AVR Phone',
+      webrtcPhoneTitle: 'DSAI Phone',
     });
 
     const saved = await this.brandingRepository.save(branding);
