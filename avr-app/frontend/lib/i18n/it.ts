@@ -1,7 +1,7 @@
 export const itDictionary = {
   common: {
-    appName: 'AVR Admin',
-    panelName: 'Pannello Admin',
+    appName: 'Digital Storming',
+    panelName: 'Digital Storming Admin',
     loggedInAs: 'Loggato come',
     role: 'Ruolo',
     logout: 'Logout',
@@ -110,7 +110,7 @@ export const itDictionary = {
     },
   },
   login: {
-    title: 'AVR Admin',
+    title: 'Digital Storming',
     description: 'Accedi per gestire agenti e provider.',
     username: 'Username',
     password: 'Password',
@@ -120,7 +120,7 @@ export const itDictionary = {
     submitting: 'Accesso in corso…',
     fallbackError: 'Credenziali non valide',
     help: 'Problemi di accesso? Contatta un amministratore.',
-    docs: 'Documentazione AVR',
+    docs: 'Documentazione',
     validation: {
       username: 'Inserisci il nome utente',
       password: 'Inserisci la password',
@@ -353,7 +353,7 @@ export const itDictionary = {
     templates: {
       stsOpenai: {
         label: 'OpenAI Speech-to-Speech',
-        description: "Container AVR basato su modello OpenAI. Richiede chiave API e modello supportato.",
+        description: "Container basato su modello OpenAI. Richiede chiave API e modello supportato.",
       },
       stsElevenlabs: {
         label: 'ElevenLabs Speech-to-Speech',
@@ -361,11 +361,11 @@ export const itDictionary = {
       },
       stsGemini: {
         label: 'Gemini Speech-to-Speech',
-        description: 'Container AVR basato su Google Gemini. Richiede API key e modello supportato.',
+        description: 'Container basato su Google Gemini. Richiede API key e modello supportato.',
       },
       stsDeepgram: {
         label: 'Deepgram Speech-to-Speech',
-        description: 'Container AVR basato su API Deepgram STS. Richiede API key Deepgram e prompt agente.',
+        description: 'Container basato su API Deepgram STS. Richiede API key Deepgram e prompt agente.',
       },
     },
     placeholders: {
@@ -378,7 +378,7 @@ export const itDictionary = {
       deepgramKeyterms: 'termini separati da virgola (es. ciao,arrivederci,ordine)',
       openaiContextLength: 'numero o max (es. 15000 o max)',
       deepgramTags: 'tag separati da virgola (es. supporto,vendite)',
-      name: 'es. avr-sts-nome-provider',
+      name: 'es. sts-nome-provider',
     },
     validation: {
       nameRequired: 'Inserisci il nome',
@@ -397,7 +397,7 @@ export const itDictionary = {
   },
   users: {
     title: 'Utenti',
-    subtitle: 'Gestisci gli accessi al pannello AVR.',
+    subtitle: 'Gestisci gli accessi al pannello admin.',
     new: 'Nuovo utente',
     createTitle: 'Crea utente',
     createDescription: 'Inserisci le credenziali per il nuovo utente.',
@@ -590,7 +590,7 @@ export const itDictionary = {
   },
   dockers: {
     title: 'Dockers',
-    subtitle: 'Monitora e gestisci i container Docker utilizzati da AVR.',
+    subtitle: 'Monitora e gestisci i container Docker.',
     refresh: 'Aggiorna',
     table: {
       name: 'Nome',

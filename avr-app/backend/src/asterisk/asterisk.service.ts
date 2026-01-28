@@ -137,6 +137,49 @@ export class AsteriskService {
     await this.reloadModule('pbx_config.so');
   }
 
+  /**
+   * Remove all dialplan entries that route to a specific extension value.
+   * This is used to clean up orphaned entries before creating a new number.
+   */
+  async cleanOrphanedNumberEntries(extensionValue: string): Promise<void> {
+    try {
+      await this.ensureFile(this.extensionsPath);
+      const content = await fs.readFile(this.extensionsPath, 'utf8');
+
+      // Find all number blocks that contain this extension value
+      const blockPattern = /; BEGIN (number-[a-f0-9-]+)\n[\s\S]*?; END \1\n?/g;
+      const extensionPattern = new RegExp(`exten => ${this.escapeRegex(extensionValue)},`);
+
+      let match;
+      const blocksToRemove: string[] = [];
+
+      // Reset lastIndex to ensure we start from the beginning
+      blockPattern.lastIndex = 0;
+
+      while ((match = blockPattern.exec(content)) !== null) {
+        const fullBlock = match[0];
+        const identifier = match[1];
+        if (extensionPattern.test(fullBlock)) {
+          blocksToRemove.push(identifier);
+        }
+      }
+
+      // Remove all found blocks
+      for (const identifier of blocksToRemove) {
+        await this.removeBlock(this.extensionsPath, identifier);
+        this.logger.debug(`Removed orphaned dialplan block: ${identifier}`);
+      }
+
+      if (blocksToRemove.length > 0) {
+        await this.reloadModule('pbx_config.so');
+        this.logger.log(`Cleaned up ${blocksToRemove.length} orphaned dialplan entries for extension ${extensionValue}`);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to clean orphaned entries for ${extensionValue}: ${(error as Error).message}`);
+      // Don't throw - this is a cleanup operation
+    }
+  }
+
   async removeTrunk(trunkId: string, direction?: TrunkDirection): Promise<void> {
     await this.removeBlock(this.trunksPath, `trunk-${trunkId}`);
 

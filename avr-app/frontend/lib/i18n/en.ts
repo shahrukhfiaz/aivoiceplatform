@@ -1,7 +1,7 @@
 export const enDictionary = {
   common: {
-    appName: 'AVR Admin',
-    panelName: 'AVR Admin Panel',
+    appName: 'Digital Storming',
+    panelName: 'Digital Storming Admin',
     loggedInAs: 'Logged in as',
     role: 'Role',
     logout: 'Logout',
@@ -110,7 +110,7 @@ export const enDictionary = {
     },
   },
   login: {
-    title: 'AVR Admin',
+    title: 'Digital Storming',
     description: 'Sign in to manage agents and providers.',
     username: 'Username',
     password: 'Password',
@@ -120,7 +120,7 @@ export const enDictionary = {
     submitting: 'Signing in…',
     fallbackError: 'Invalid credentials',
     help: 'Having trouble signing in? Contact an administrator.',
-    docs: 'AVR Documentation',
+    docs: 'Documentation',
     validation: {
       username: 'Enter your username',
       password: 'Enter your password',
@@ -353,7 +353,7 @@ export const enDictionary = {
     templates: {
       stsOpenai: {
         label: 'OpenAI Speech-to-Speech',
-        description: 'AVR container based on OpenAI models. Requires API key and supported model.',
+        description: 'Container based on OpenAI models. Requires API key and supported model.',
       },
       stsElevenlabs: {
         label: 'ElevenLabs Speech-to-Speech',
@@ -361,11 +361,11 @@ export const enDictionary = {
       },
       stsGemini: {
         label: 'Gemini Speech-to-Speech',
-        description: 'AVR container powered by Google Gemini. Requires API key and supported model.',
+        description: 'Container powered by Google Gemini. Requires API key and supported model.',
       },
       stsDeepgram: {
         label: 'Deepgram Speech-to-Speech',
-        description: 'AVR container powered by Deepgram STS API. Requires Deepgram API key and agent prompt.',
+        description: 'Container powered by Deepgram STS API. Requires Deepgram API key and agent prompt.',
       },
     },
     placeholders: {
@@ -378,7 +378,7 @@ export const enDictionary = {
       deepgramKeyterms: 'comma-separated terms (e.g., hello,goodbye,order)',
       openaiContextLength: 'number or max (e.g., 15000 or max)',
       deepgramTags: 'comma-separated tags (e.g., support,sales)',
-      name: 'e.g. avr-sts-provider-name',
+      name: 'e.g. sts-provider-name',
     },
     validation: {
       nameRequired: 'Enter the name',
@@ -397,7 +397,7 @@ export const enDictionary = {
   },
   users: {
     title: 'Users',
-    subtitle: 'Manage access to the AVR panel.',
+    subtitle: 'Manage access to the admin panel.',
     new: 'New user',
     createTitle: 'Create user',
     createDescription: 'Enter the credentials for the new user.',
@@ -588,7 +588,7 @@ export const enDictionary = {
   },
   dockers: {
     title: 'Dockers',
-    subtitle: 'Inspect and control the Docker containers managed by AVR.',
+    subtitle: 'Inspect and control the Docker containers.',
     refresh: 'Refresh',
     table: {
       name: 'Name',

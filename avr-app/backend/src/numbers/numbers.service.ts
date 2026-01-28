@@ -43,6 +43,11 @@ export class NumbersService {
       throw new ConflictException('Number already exists');
     }
 
+    // Clean up any orphaned dialplan entries for this extension value
+    // This handles cases where a previous number with the same extension was deleted
+    // but the Asterisk config wasn't properly cleaned up
+    await this.asteriskService.cleanOrphanedNumberEntries(value);
+
     const payload = await this.buildAssociations(dto);
 
     const number = this.numbersRepository.create({
@@ -134,9 +139,14 @@ export class NumbersService {
       throw new NotFoundException('Number not found');
     }
 
-    await this.numbersRepository.remove(number);
-
+    // Remove Asterisk config BEFORE deleting from database
+    // This ensures the config is cleaned up even if the database deletion fails
     await this.asteriskService.removeNumber(id);
+
+    // Also clean up any other orphaned entries with the same extension value
+    await this.asteriskService.cleanOrphanedNumberEntries(number.value);
+
+    await this.numbersRepository.remove(number);
   }
 
   private async buildAssociations(

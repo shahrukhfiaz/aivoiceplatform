@@ -515,7 +515,7 @@ function AppShellContent({
             style={{ transformOrigin: "bottom right" }}
           >
             <div className="flex items-center justify-between border-b border-border/80 bg-muted/40 px-3 py-2 text-sm font-medium">
-              <span>{branding?.webrtcPhoneTitle || "AVR Phone"}</span>
+              <span>{branding?.webrtcPhoneTitle || "Digital Storming Phone"}</span>
               <Button
                 variant="ghost"
                 size="icon"
