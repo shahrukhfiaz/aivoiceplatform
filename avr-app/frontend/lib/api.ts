@@ -76,6 +76,7 @@ export async function apiFetch<T>(endpoint: string, init: ApiFetchOptions = {}):
   const response = await fetch(url.toString(), {
     ...fetchInit,
     headers,
+    cache: 'no-store', // Prevent browser caching of API responses
   });
 
   if (!response.ok) {
