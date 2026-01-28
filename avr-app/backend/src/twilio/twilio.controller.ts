@@ -66,4 +66,12 @@ export class TwilioController {
   ): Promise<{ valid: boolean; error?: string }> {
     return this.twilioService.verifyCredentials(id);
   }
+
+  @Post(':id/configure-webhooks')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  configureWebhooks(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    return this.twilioService.configureWebhooksById(id);
+  }
 }

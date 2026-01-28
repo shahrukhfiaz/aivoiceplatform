@@ -87,6 +87,9 @@ export class TwilioService {
     const saved = await this.twilioNumberRepository.save(twilioNumber);
     this.logger.log(`Created Twilio number: ${phoneNumber}`);
 
+    // Auto-configure Twilio webhook URLs
+    await this.configureTwilioWebhooks(saved, dto.authToken);
+
     return this.toResponse(saved);
   }
 
@@ -198,6 +201,10 @@ export class TwilioService {
     const saved = await this.twilioNumberRepository.save(twilioNumber);
     this.logger.log(`Updated Twilio number: ${saved.phoneNumber}`);
 
+    // Re-configure Twilio webhooks if auth token was updated or if it's a significant change
+    const authToken = dto.authToken || this.encryptionService.decrypt(saved.authTokenEncrypted);
+    await this.configureTwilioWebhooks(saved, authToken);
+
     return this.toResponse(saved);
   }
 
@@ -245,6 +252,79 @@ export class TwilioService {
    */
   getDecryptedAuthToken(twilioNumber: TwilioNumber): string {
     return this.encryptionService.decrypt(twilioNumber.authTokenEncrypted);
+  }
+
+  /**
+   * Configure Twilio webhooks by ID (decrypts auth token from stored entity)
+   */
+  async configureWebhooksById(
+    id: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    const twilioNumber = await this.findOneEntity(id);
+    const authToken = this.encryptionService.decrypt(twilioNumber.authTokenEncrypted);
+    return this.configureTwilioWebhooks(twilioNumber, authToken);
+  }
+
+  /**
+   * Configure Twilio phone number webhooks for voice calls
+   * This automatically sets the Voice URL in Twilio to point to our webhook
+   */
+  async configureTwilioWebhooks(
+    twilioNumber: TwilioNumber,
+    authToken: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const twilio = await import('twilio');
+      const client = twilio.default(twilioNumber.accountSid, authToken);
+
+      // Build the webhook URLs
+      const publicUrl = process.env.PUBLIC_URL || `https://${process.env.PUBLIC_HOST || 'localhost'}`;
+      const voiceUrl = `${publicUrl}/twilio/webhook/voice/${twilioNumber.id}`;
+      const statusCallbackUrl = `${publicUrl}/twilio/webhook/status/${twilioNumber.id}`;
+
+      this.logger.log(`Configuring Twilio webhooks for ${twilioNumber.phoneNumber}`);
+      this.logger.log(`Voice URL: ${voiceUrl}`);
+
+      // Find the phone number in Twilio account
+      const incomingPhoneNumbers = await client.incomingPhoneNumbers.list({
+        phoneNumber: twilioNumber.phoneNumber,
+        limit: 1,
+      });
+
+      if (incomingPhoneNumbers.length === 0) {
+        this.logger.warn(
+          `Phone number ${twilioNumber.phoneNumber} not found in Twilio account ${twilioNumber.accountSid}`,
+        );
+        return {
+          success: false,
+          error: `Phone number not found in Twilio account. Make sure the number is purchased and belongs to this account.`,
+        };
+      }
+
+      const twilioPhoneNumber = incomingPhoneNumbers[0];
+
+      // Update the phone number's voice configuration
+      await client.incomingPhoneNumbers(twilioPhoneNumber.sid).update({
+        voiceUrl: voiceUrl,
+        voiceMethod: 'POST',
+        statusCallback: statusCallbackUrl,
+        statusCallbackMethod: 'POST',
+      });
+
+      this.logger.log(
+        `Successfully configured Twilio webhooks for ${twilioNumber.phoneNumber} (SID: ${twilioPhoneNumber.sid})`,
+      );
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(
+        `Failed to configure Twilio webhooks for ${twilioNumber.phoneNumber}: ${errorMessage}`,
+      );
+      // Don't throw - just log the error. The number is still saved.
+      return { success: false, error: errorMessage };
+    }
   }
 
   private toResponse(entity: TwilioNumber): TwilioNumberResponse {
