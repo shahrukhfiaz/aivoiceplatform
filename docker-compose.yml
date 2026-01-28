@@ -155,6 +155,8 @@ services:
       - PORT=3001
       - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-for-production-change-this}
       - FRONTEND_URL=${FRONTEND_URL:-https://ai.digitalstorming.com}
+      - PUBLIC_URL=${PUBLIC_URL:-https://ai.digitalstorming.com}
+      - PUBLIC_HOST=${PUBLIC_HOST:-ai.digitalstorming.com}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
       - WEBHOOK_URL=http://avr-backend:3001/webhooks
