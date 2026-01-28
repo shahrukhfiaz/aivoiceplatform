@@ -226,7 +226,7 @@ function AppShellContent({
           <SidebarHeader className="mb-6 shrink-0 border-none p-0">
             <div className="flex items-center gap-3">
               <Image
-                src={branding?.logoUrl || "/logo.svg"}
+                src={branding?.logoUrl || "/ds-logo-square.png"}
                 alt={branding?.appName || dictionary.common.appName}
                 width={36}
                 height={36}

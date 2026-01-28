@@ -79,7 +79,7 @@ export default function LoginPage() {
           <CardHeader>
             <div className="flex flex-col items-center gap-4">
               <Image
-                src={branding?.logoUrl || "/logo.svg"}
+                src={branding?.logoUrl || "/ds-logo-square.png"}
                 alt={branding?.loginTitle || branding?.appName || dictionary.login.title}
                 width={72}
                 height={72}

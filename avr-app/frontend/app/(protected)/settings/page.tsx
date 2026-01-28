@@ -229,7 +229,7 @@ export default function SettingsPage() {
                     <FormLabel>Logo URL</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="/logo.svg or https://example.com/logo.png"
+                        placeholder="/ds-logo-square.png or https://example.com/logo.png"
                         {...field}
                       />
                     </FormControl>
