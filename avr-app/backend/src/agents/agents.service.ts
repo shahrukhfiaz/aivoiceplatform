@@ -8,13 +8,16 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { DockerService } from '../docker/docker.service';
 import { AsteriskService } from '../asterisk/asterisk.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { Provider, ProviderType } from '../providers/provider.entity';
 import { Trunk } from '../trunks/trunk.entity';
+import { PhoneNumber } from '../numbers/number.entity';
+import { Call } from '../webhooks/call.entity';
+import { TwilioNumber } from '../twilio/twilio-number.entity';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { DialCallDto } from './dto/dial-call.dto';
 import { DialResponseDto } from './dto/dial-response.dto';
@@ -42,6 +45,12 @@ export class AgentsService {
     private readonly providerRepository: Repository<Provider>,
     @InjectRepository(Trunk)
     private readonly trunkRepository: Repository<Trunk>,
+    @InjectRepository(PhoneNumber)
+    private readonly phoneNumberRepository: Repository<PhoneNumber>,
+    @InjectRepository(Call)
+    private readonly callRepository: Repository<Call>,
+    @InjectRepository(TwilioNumber)
+    private readonly twilioNumberRepository: Repository<TwilioNumber>,
     private readonly dockerService: DockerService,
     private readonly asteriskService: AsteriskService,
     @Inject(forwardRef(() => WebhooksService))
@@ -157,16 +166,55 @@ export class AgentsService {
     if (!agent) {
       throw new NotFoundException('Agent not found');
     }
+
+    this.logger.log(`Deleting agent ${id}: stopping containers...`);
+
+    // 1. Stop all agent containers first
     const names = this.getContainerNames(agent.id, agent.mode);
     for (const name of names) {
-      await this.dockerService.stopContainer(name);
+      try {
+        await this.dockerService.stopContainer(name);
+      } catch (error) {
+        this.logger.warn(`Failed to stop container ${name}: ${error.message}`);
+      }
     }
-    // TODO: remove phone related to agent from asterisk
 
+    // 2. Unlink phone numbers from this agent (set agent to null)
+    this.logger.log(`Deleting agent ${id}: unlinking phone numbers...`);
+    await this.phoneNumberRepository.update(
+      { agent: { id } },
+      { agent: null }
+    );
+
+    // 3. Unlink calls from this agent (set agent to null, but keep call history)
+    this.logger.log(`Deleting agent ${id}: unlinking calls...`);
+    await this.callRepository.update(
+      { agent: { id } },
+      { agent: null }
+    );
+
+    // 4. Unlink trunks from this agent (clear the agent reference on inbound trunks)
+    this.logger.log(`Deleting agent ${id}: unlinking trunks...`);
+    await this.trunkRepository.update(
+      { agent: { id } },
+      { agent: null }
+    );
+
+    // 5. Unlink Twilio numbers from this agent
+    this.logger.log(`Deleting agent ${id}: unlinking Twilio numbers...`);
+    await this.twilioNumberRepository.update(
+      { agent: { id } },
+      { agent: null, agentId: null }
+    );
+
+    // 6. Now delete the agent
+    this.logger.log(`Deleting agent ${id}: removing from database...`);
     const result = await this.agentRepository.delete({ id });
     if (!result.affected) {
       throw new NotFoundException('Agent not found');
     }
+
+    this.logger.log(`Agent ${id} deleted successfully`);
   }
 
   async runAgent(id: string, runAgentDto: RunAgentDto) {

@@ -4,9 +4,10 @@ import { RolesGuard } from '../auth/roles.guard';
 import { ProvidersService } from './providers.service';
 import { ProvidersController, InternalProvidersController } from './providers.controller';
 import { Provider } from './provider.entity';
+import { Agent } from '../agents/agent.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Provider])],
+  imports: [TypeOrmModule.forFeature([Provider, Agent])],
   providers: [ProvidersService, RolesGuard],
   controllers: [ProvidersController, InternalProvidersController],
   exports: [ProvidersService],

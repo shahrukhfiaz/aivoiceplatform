@@ -431,12 +431,15 @@ export default function TwilioPage() {
           <FormItem>
             <FormLabel>{dictionary.twilio.fields.agent}</FormLabel>
             <FormControl>
-              <Select onValueChange={field.onChange} value={field.value || ''}>
+              <Select
+                onValueChange={(value) => field.onChange(value === 'none' ? '' : value)}
+                value={field.value || 'none'}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={dictionary.twilio.placeholders.agent} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{dictionary.twilio.placeholders.noAgent}</SelectItem>
+                  <SelectItem value="none">{dictionary.twilio.placeholders.noAgent}</SelectItem>
                   {agents.map((agent) => (
                     <SelectItem key={agent.id} value={agent.id}>
                       {agent.name}

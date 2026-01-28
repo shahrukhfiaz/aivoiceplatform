@@ -1000,23 +1000,6 @@ export default function ProvidersPage() {
                       <p className="text-sm text-muted-foreground">
                         {createSelectedTemplate.description}
                       </p>
-                      <FormField
-                        control={form.control}
-                        name="image"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{dictionary.providers.fields.image}</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder={createSelectedTemplate.defaultImage ?? 'repository:tag'}
-                                {...field}
-                                value={field.value ?? ''}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                       {useMemo(() => {
                         if (!createSelectedTemplate) return null;
                         const basicFields = createSelectedTemplate.fields.filter((f) => !f.advanced);
@@ -1228,7 +1211,6 @@ export default function ProvidersPage() {
                   <TableHead>{dictionary.providers.table.id}</TableHead>
                   <TableHead>{dictionary.providers.table.name}</TableHead>
                   <TableHead>{dictionary.providers.table.type}</TableHead>
-                  <TableHead>{dictionary.providers.table.image}</TableHead>
                   <TableHead className="text-right">{dictionary.providers.table.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1240,7 +1222,6 @@ export default function ProvidersPage() {
                       </TableCell>
                       <TableCell className="font-medium">{provider.name}</TableCell>
                       <TableCell>{provider.type}</TableCell>
-                      <TableCell>{provider.config?.image ?? '—'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -1377,23 +1358,6 @@ export default function ProvidersPage() {
                 {editSelectedTemplate ? (
                   <div className="space-y-4 rounded-md border border-dashed border-border/60 p-4">
                     <p className="text-sm text-muted-foreground">{editSelectedTemplate.description}</p>
-                    <FormField
-                      control={editForm.control}
-                      name="image"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{dictionary.providers.fields.image}</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder={editSelectedTemplate.defaultImage ?? 'repository:tag'}
-                              {...field}
-                              value={field.value ?? ''}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                     {useMemo(() => {
                       if (!editSelectedTemplate) return null;
                       const basicFields = editSelectedTemplate.fields.filter((f) => !f.advanced);

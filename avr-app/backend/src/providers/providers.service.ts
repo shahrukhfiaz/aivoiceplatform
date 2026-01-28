@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { CreateProviderDto } from './dto/create-provider.dto';
 import { UpdateProviderDto } from './dto/update-provider.dto';
 import { Provider } from './provider.entity';
+import { Agent } from '../agents/agent.entity';
 import {
   buildPaginatedResult,
   getPagination,
@@ -23,6 +24,8 @@ export class ProvidersService {
   constructor(
     @InjectRepository(Provider)
     private readonly providerRepository: Repository<Provider>,
+    @InjectRepository(Agent)
+    private readonly agentRepository: Repository<Agent>,
   ) {}
 
   async create(createProviderDto: CreateProviderDto): Promise<Provider> {
@@ -93,9 +96,52 @@ export class ProvidersService {
   }
 
   async remove(id: string): Promise<void> {
+    const provider = await this.providerRepository.findOne({ where: { id } });
+    if (!provider) {
+      throw new NotFoundException('Provider not found');
+    }
+
+    this.logger.log(`Deleting provider ${id}: unlinking agents...`);
+
+    // Unlink agents that reference this provider (ASR)
+    await this.agentRepository
+      .createQueryBuilder()
+      .update(Agent)
+      .set({ providerAsr: null })
+      .where('provider_asr_id = :id', { id })
+      .execute();
+
+    // Unlink agents that reference this provider (LLM)
+    await this.agentRepository
+      .createQueryBuilder()
+      .update(Agent)
+      .set({ providerLlm: null })
+      .where('provider_llm_id = :id', { id })
+      .execute();
+
+    // Unlink agents that reference this provider (TTS)
+    await this.agentRepository
+      .createQueryBuilder()
+      .update(Agent)
+      .set({ providerTts: null })
+      .where('provider_tts_id = :id', { id })
+      .execute();
+
+    // Unlink agents that reference this provider (STS)
+    await this.agentRepository
+      .createQueryBuilder()
+      .update(Agent)
+      .set({ providerSts: null })
+      .where('provider_sts_id = :id', { id })
+      .execute();
+
+    // Now delete the provider
+    this.logger.log(`Deleting provider ${id}: removing from database...`);
     const result = await this.providerRepository.delete({ id });
     if (!result.affected) {
       throw new NotFoundException('Provider not found');
     }
+
+    this.logger.log(`Provider ${id} deleted successfully`);
   }
 }
