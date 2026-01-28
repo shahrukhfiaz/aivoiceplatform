@@ -103,7 +103,8 @@ export default function PhonesPage() {
 
   const isReadOnly = user?.role === 'viewer';
 
-  const websocketServer = useMemo(() => (domain ? `wss://${domain}/ws` : ''), [domain]);
+  // Softphone adds wss:// prefix and :PORT/ws suffix automatically, so just provide the domain
+  const websocketServer = useMemo(() => domain || '', [domain]);
 
   const form = useForm<PhoneFormValues>({
     resolver: zodResolver(phoneSchema),
