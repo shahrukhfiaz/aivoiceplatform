@@ -529,7 +529,7 @@ function AppShellContent({
               </Button>
             </div>
             <iframe
-              src={webRtcClientUrl ? `${webRtcClientUrl}?autoLogin=true&user=2000&pass=2000&name=Admin` : undefined}
+              src={webRtcClientUrl ? `${webRtcClientUrl}?autoLogin=true&user=2000&pass=2000&name=Admin&wss=ai.digitalstorming.com&port=8443&domain=ai.digitalstorming.com&path=/ws` : undefined}
               title="WebRTC Phone"
               className="h-full w-full border-0"
               allow="camera; microphone; autoplay"
