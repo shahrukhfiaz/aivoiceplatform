@@ -95,13 +95,14 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
             const customParams = message.start?.customParameters || {};
             agentId = customParams.agentId;
             agentPort = customParams.agentPort ? parseInt(customParams.agentPort) : null;
+            const stsPort = customParams.stsPort ? parseInt(customParams.stsPort) : 6678;
             callUuid = customParams.callUuid;
 
-            this.logger.log(`Stream started: ${streamSid}, Call: ${callSid}, Agent: ${agentId}`);
+            this.logger.log(`Stream started: ${streamSid}, Call: ${callSid}, Agent: ${agentId}, STS Port: ${stsPort}`);
 
             // Connect to the STS container
-            if (agentId && agentPort) {
-              stsWs = await this.connectToSTS(agentId, agentPort, callUuid || 'unknown');
+            if (agentId) {
+              stsWs = await this.connectToSTS(agentId, stsPort, callUuid || 'unknown');
 
               if (stsWs) {
                 isInitialized = true;
@@ -111,7 +112,7 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
                 twilioWs.close();
               }
             } else {
-              this.logger.error('Missing agentId or agentPort in start event');
+              this.logger.error('Missing agentId in start event');
               twilioWs.close();
             }
             break;
@@ -171,7 +172,7 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
   /**
    * Connect to the STS container's WebSocket server
    */
-  private async connectToSTS(agentId: string, agentPort: number, callUuid: string): Promise<WebSocket | null> {
+  private async connectToSTS(agentId: string, stsPort: number, callUuid: string): Promise<WebSocket | null> {
     try {
       // Get agent to find STS container info
       const agent = await this.agentRepo.findOne({ where: { id: agentId } });
@@ -181,10 +182,8 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
       }
 
       // Build STS WebSocket URL
-      // The STS container runs on its own internal port (6678), not the agent's AudioSocket port
-      // The agent's port (e.g., 5957) is for AudioSocket connections from Asterisk
+      // The STS port is dynamically assigned when the container starts and passed via TwiML
       const stsContainerName = `dsai-sts-${agentId}`;
-      const stsPort = 6678; // STS container always uses port 6678 internally
       const stsUrl = `ws://${stsContainerName}:${stsPort}`;
 
       this.logger.log(`Connecting to STS at ${stsUrl}`);

@@ -105,7 +105,7 @@ export class TwilioCallService {
     }, agent.id);
 
     // 7. Generate TwiML with Media Streams
-    return this.generateMediaStreamTwiML({
+    return await this.generateMediaStreamTwiML({
       twilioNumber,
       callSid,
       from,
@@ -235,13 +235,24 @@ export class TwilioCallService {
   /**
    * Generate TwiML for Media Streams connection to AI agent
    */
-  private generateMediaStreamTwiML(options: TwiMLOptions): string {
+  private async generateMediaStreamTwiML(options: TwiMLOptions): Promise<string> {
     const { twilioNumber, callUuid } = options;
     const agent = twilioNumber.agent!;
 
-    // Get the agent's AudioSocket port
-    const agentHost = process.env.PUBLIC_HOST || 'localhost';
-    const wsProtocol = process.env.NODE_ENV === 'production' ? 'wss' : 'ws';
+    // Get the STS URL from the running container
+    const providerUrls = await this.agentsService.getProviderUrls(agent);
+    const stsUrl = providerUrls.stsUrl;
+
+    // Extract port from STS URL (e.g., ws://dsai-sts-xxx:6429 -> 6429)
+    let stsPort = '6678'; // fallback
+    if (stsUrl) {
+      const portMatch = stsUrl.match(/:(\d+)$/);
+      if (portMatch) {
+        stsPort = portMatch[1];
+      }
+    }
+
+    this.logger.log(`STS URL: ${stsUrl}, extracted port: ${stsPort}`);
 
     // Media stream URL should connect to our Twilio Media Stream gateway
     const publicUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3001}`;
@@ -255,6 +266,7 @@ export class TwilioCallService {
       <Parameter name="callUuid" value="${callUuid}" />
       <Parameter name="agentId" value="${agent.id}" />
       <Parameter name="agentPort" value="${agent.port}" />
+      <Parameter name="stsPort" value="${stsPort}" />
       <Parameter name="twilioNumberId" value="${twilioNumber.id}" />
     </Stream>
   </Connect>
