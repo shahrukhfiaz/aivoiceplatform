@@ -4,7 +4,9 @@ services:
     container_name: traefik
     restart: always
     command:
-      - "--api.insecure=true"
+      # Disable insecure API in production - use dashboard only if needed via secure route
+      - "--api.insecure=false"
+      - "--api.dashboard=false"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
@@ -16,10 +18,13 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      # Enable access logs for security monitoring
+      - "--accesslog=true"
+      - "--accesslog.format=json"
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
+      # Remove 8080 from public - Traefik dashboard not needed in production
       - "8443:8443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -33,13 +38,13 @@ services:
     container_name: avr-asterisk
     restart: always
     ports:
-      - "5038:5038"
+      # AMI port - internal only, not exposed to host for security
+      # SIP ports - only allow from SIP trunk provider via firewall
       - "5060:5060/udp"
       - "5060:5060/tcp"
-      - "9088:8088"
-      - "9089:8089"
-      - "9090:8090"
+      # RTP ports for media
       - "10000-10050:10000-10050/udp"
+      # ARI/HTTP ports not exposed - accessed via Traefik for WebSocket
     labels:
       - "traefik.enable=true"
       # HTTP routing with TLS termination at Traefik for WebSocket
@@ -83,8 +88,7 @@ services:
       - PORT=5001
       - WEBHOOK_URL=http://avr-backend:3001/webhooks
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-webhook-secret-change-this}
-    ports:
-      - "5001:5001"
+    # Port 5001 only accessible within Docker network (not exposed to host)
     networks:
       - avr
 
@@ -185,8 +189,12 @@ services:
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls=true"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.backend.middlewares=backend-strip"
+      - "traefik.http.routers.backend.middlewares=backend-strip,api-ratelimit"
       - "traefik.http.middlewares.backend-strip.stripprefix.prefixes=/api/"
+      # Rate limiting: 100 requests per second average, burst up to 200
+      - "traefik.http.middlewares.api-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.api-ratelimit.ratelimit.burst=200"
+      - "traefik.http.middlewares.api-ratelimit.ratelimit.period=1s"
       - "traefik.http.services.backend.loadbalancer.server.port=3001"
       # Twilio webhook router (no prefix stripping needed)
       - "traefik.http.routers.backend-twilio.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && PathPrefix(`/twilio/`)"
@@ -222,6 +230,14 @@ services:
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls=true"
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend.middlewares=security-headers"
+      # Security headers middleware
+      - "traefik.http.middlewares.security-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
     depends_on:
       - backend
