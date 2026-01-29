@@ -189,12 +189,15 @@ services:
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls=true"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.backend.middlewares=backend-strip,api-ratelimit"
+      - "traefik.http.routers.backend.middlewares=backend-strip,api-ratelimit,api-nocache"
       - "traefik.http.middlewares.backend-strip.stripprefix.prefixes=/api/"
       # Rate limiting: 100 requests per second average, burst up to 200
       - "traefik.http.middlewares.api-ratelimit.ratelimit.average=100"
       - "traefik.http.middlewares.api-ratelimit.ratelimit.burst=200"
       - "traefik.http.middlewares.api-ratelimit.ratelimit.period=1s"
+      # Disable caching for API responses
+      - "traefik.http.middlewares.api-nocache.headers.customresponseheaders.Cache-Control=no-store, no-cache, must-revalidate"
+      - "traefik.http.middlewares.api-nocache.headers.customresponseheaders.Pragma=no-cache"
       - "traefik.http.services.backend.loadbalancer.server.port=3001"
       # Twilio webhook router (no prefix stripping needed)
       - "traefik.http.routers.backend-twilio.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && PathPrefix(`/twilio/`)"
