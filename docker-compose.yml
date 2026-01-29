@@ -199,6 +199,7 @@ services:
       - avr-ami
     networks:
       - avr
+      - dsai
 
   frontend:
     build:
@@ -229,3 +230,6 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/24
+  dsai:
+    name: dsai
+    external: true
