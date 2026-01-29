@@ -10,6 +10,7 @@ import { TwilioController } from './twilio.controller';
 import { TwilioService } from './twilio.service';
 import { TwilioCallService } from './twilio-call.service';
 import { TwilioWebhookController } from './twilio-webhook.controller';
+import { TwilioMediaStreamGateway } from './twilio-media-stream.gateway';
 
 @Module({
   imports: [
@@ -17,8 +18,8 @@ import { TwilioWebhookController } from './twilio-webhook.controller';
     forwardRef(() => WebhooksModule),
     forwardRef(() => AgentsModule),
   ],
-  providers: [TwilioService, TwilioCallService, EncryptionService, RolesGuard],
+  providers: [TwilioService, TwilioCallService, TwilioMediaStreamGateway, EncryptionService, RolesGuard],
   controllers: [TwilioController, TwilioWebhookController],
-  exports: [TwilioService, TwilioCallService],
+  exports: [TwilioService, TwilioCallService, TwilioMediaStreamGateway],
 })
 export class TwilioModule {}

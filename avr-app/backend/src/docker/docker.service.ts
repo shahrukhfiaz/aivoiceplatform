@@ -103,6 +103,16 @@ export class DockerService {
     });
     await container.start();
     this.logger.debug(`Created and started container ${name}`);
+
+    // Also connect to 'avr' network so backend can reach the container
+    try {
+      const avrNetwork = this.docker.getNetwork('avr');
+      await avrNetwork.connect({ Container: container.id });
+      this.logger.debug(`Connected container ${name} to avr network`);
+    } catch (error: any) {
+      this.logger.warn(`Failed to connect ${name} to avr network: ${error.message}`);
+    }
+
     return container.id;
   }
 

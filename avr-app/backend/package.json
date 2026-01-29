@@ -38,7 +38,8 @@
     "sqlite3": "^5.1.7",
     "systeminformation": "^5.30.6",
     "twilio": "^5.12.0",
-    "typeorm": "^0.3.28"
+    "typeorm": "^0.3.28",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.16",
@@ -52,6 +53,7 @@
     "@types/node": "^25.0.9",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.3",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.53.0",
     "@typescript-eslint/parser": "^8.53.0",
     "eslint": "^9.39.2",
