@@ -123,6 +123,8 @@ services:
     platform: linux/amd64
     container_name: avr-phone
     restart: always
+    volumes:
+      - ./avr-phone/src/phone.js:/usr/share/nginx/html/phone.js:ro
     labels:
       - "traefik.enable=true"
       # Main phone page route
