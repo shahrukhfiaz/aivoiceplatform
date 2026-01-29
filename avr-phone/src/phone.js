@@ -21,8 +21,47 @@ const navUserAgent = window.navigator.userAgent;  // TODO: change to Navigator.u
 const instanceID = String(Date.now());
 const localDB = window.localStorage;
 
-// Set the following to null to disable
-let welcomeScreen = "<div class=\"UiWindowField\"><pre style=\"font-size: 12px\">";
+// Parse URL parameters for auto-login feature
+const urlParams = new URLSearchParams(window.location.search);
+const autoLogin = urlParams.get('autoLogin') === 'true';
+const autoUser = urlParams.get('user');
+const autoPass = urlParams.get('pass');
+const autoName = urlParams.get('name');
+const autoWss = urlParams.get('wss');
+const autoDomain = urlParams.get('domain');
+const autoPort = urlParams.get('port');
+const autoPath = urlParams.get('path');
+
+// Auto-configure if URL parameters are provided
+if (autoLogin && autoUser && autoPass) {
+    console.log("Auto-login mode enabled via URL parameters");
+    // Set configuration in localStorage
+    if (autoWss) localDB.setItem("wssServer", autoWss);
+    if (autoPort) localDB.setItem("WebSocketPort", autoPort);
+    if (autoPath !== null) localDB.setItem("ServerPath", autoPath);
+    if (autoDomain) localDB.setItem("SipDomain", autoDomain);
+    localDB.setItem("SipUsername", autoUser);
+    localDB.setItem("SipPassword", autoPass);
+    if (autoName) localDB.setItem("profileName", autoName);
+    // Auto-accept welcome screen and create profile
+    localDB.setItem("WelcomeScreenAccept", "yes");
+    // Generate profileUserID if not set
+    if (!localDB.getItem("profileUserID")) {
+        localDB.setItem("profileUserID", uuidv4());
+    }
+}
+
+// Helper function to generate UUID
+function uuidv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+// Set the following to null to disable (or set welcomeScreen = null if autoLogin is enabled)
+let welcomeScreen = autoLogin ? null : "<div class=\"UiWindowField\"><pre style=\"font-size: 12px\">";
+if (!autoLogin) {
 welcomeScreen += "===========================================================================\n";
 welcomeScreen += "Copyright © 2020 - All Rights Reserved\n";
 welcomeScreen += "===========================================================================\n";
@@ -51,6 +90,7 @@ welcomeScreen += "POSSIBILITY OF SUCH DAMAGES.\n";
 welcomeScreen += "\n";
 welcomeScreen += "============================================================================\n</pre>";
 welcomeScreen += "</div>";
+}
 
 /**
  * Language Packs (lang/xx.json)
