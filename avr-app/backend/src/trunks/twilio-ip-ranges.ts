@@ -4,41 +4,40 @@
  * These IP ranges are used to identify incoming SIP traffic from Twilio.
  * Reference: https://www.twilio.com/docs/sip-trunking/ip-addresses
  *
- * Last updated: 2024
+ * Last updated: January 2026
  */
 
 // Twilio Signaling IPs (SIP) - North America
+// Official Elastic SIP Trunking IPs from https://www.twilio.com/docs/sip-trunking/ip-addresses
 export const TWILIO_SIGNALING_IPS_NA = [
-  // Ashburn, Virginia
-  '54.172.60.0/23',
-  '34.203.250.0/23',
-  // Dallas, Texas
-  '168.86.128.0/18',
+  // Virginia (us1)
+  '54.172.60.0/30',
+  // Oregon (us2)
+  '54.244.51.0/30',
 ];
 
 // Twilio Signaling IPs (SIP) - Europe
 export const TWILIO_SIGNALING_IPS_EU = [
-  // Ireland
-  '54.171.127.192/26',
-  '52.215.127.0/24',
-  // Frankfurt
-  '35.156.191.128/25',
+  // Ireland (ie1)
+  '54.171.127.192/30',
+  // Frankfurt (de1)
+  '35.156.191.128/30',
 ];
 
 // Twilio Signaling IPs (SIP) - Asia Pacific
 export const TWILIO_SIGNALING_IPS_APAC = [
-  // Sydney
-  '54.252.254.64/26',
-  // Tokyo
-  '54.65.63.192/26',
-  // Singapore
-  '54.169.127.128/26',
+  // Sydney (au1)
+  '54.252.254.64/30',
+  // Tokyo (jp1)
+  '54.65.63.192/30',
+  // Singapore (sg1)
+  '54.169.127.128/30',
 ];
 
 // Twilio Signaling IPs (SIP) - South America
 export const TWILIO_SIGNALING_IPS_SA = [
-  // São Paulo
-  '177.71.206.192/26',
+  // São Paulo (br1)
+  '177.71.206.192/30',
 ];
 
 // All Twilio Signaling IPs combined
