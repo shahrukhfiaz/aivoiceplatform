@@ -129,6 +129,7 @@ services:
     restart: always
     volumes:
       - ./avr-phone/src/phone.js:/usr/share/nginx/html/phone.js:ro
+      - ./avr-phone/src/sw.js:/usr/share/nginx/html/sw.js:ro
     labels:
       - "traefik.enable=true"
       # Main phone page route
@@ -183,6 +184,7 @@ services:
       - ASTERISK_CONFIG_PATH=/app/asterisk
       - ASTERISK_MONITOR_PATH=/app/recordings
       - NETWORK=avr
+      - PUBLIC_IP=${PUBLIC_IP:-}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`) && PathPrefix(`/api/`)"
