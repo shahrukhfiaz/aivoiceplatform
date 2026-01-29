@@ -1,6 +1,6 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { Call, CallType } from './call.entity';
 import { CallEvent, WebhookEventType } from './call-event.entity';
 import { WebhookEventDto } from './dto/webhook-event.dto';
@@ -350,9 +350,21 @@ export class WebhooksService {
         qb.andWhere('call.agentId = :agentId', { agentId });
       }
       if (since) {
-        qb.andWhere('call.startedAt >= :since', {
-          since: since.toISOString(),
-        });
+        // Use Brackets to include Twilio calls with NULL startedAt
+        // Twilio calls may not have startedAt until in-progress callback arrives
+        // Falls back to createdAt for calls that haven't received the callback yet
+        qb.andWhere(
+          new Brackets((qb2) => {
+            qb2.where('call.startedAt >= :since').orWhere(
+              new Brackets((qb3) => {
+                qb3
+                  .where('call.twilioCallSid IS NOT NULL')
+                  .andWhere('call.createdAt >= :since');
+              }),
+            );
+          }),
+          { since: since.toISOString() },
+        );
       }
       return qb;
     };
@@ -363,10 +375,18 @@ export class WebhooksService {
       .getRawOne<{ total: string }>();
     const totalCalls = Number(totalResult?.total ?? 0);
 
-    // Active calls (started but not ended)
+    // Active calls: not ended yet
+    // For Twilio calls: may not have startedAt until in-progress callback arrives
+    // For SIP calls: startedAt is set when call connects
     const activeResult = await baseQb()
-      .andWhere('call.startedAt IS NOT NULL')
       .andWhere('call.endedAt IS NULL')
+      .andWhere(
+        new Brackets((qb) => {
+          qb.where('call.startedAt IS NOT NULL').orWhere(
+            'call.twilioCallSid IS NOT NULL',
+          );
+        }),
+      )
       .select('COUNT(call.id)', 'total')
       .getRawOne<{ total: string }>();
     const activeCalls = Number(activeResult?.total ?? 0);

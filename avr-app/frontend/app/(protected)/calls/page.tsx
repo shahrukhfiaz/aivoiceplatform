@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpDown, Download, Eye, MessageSquare, Play, RefreshCcw } from 'lucide-react';
+import { ArrowUpDown, Copy, Download, Eye, MessageSquare, Play, RefreshCcw } from 'lucide-react';
 import { apiFetch, ApiError, getApiUrl, getStoredToken, type PaginatedResponse } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
@@ -687,17 +687,67 @@ export default function CallsPage() {
                     <TableRow key={call.id}>
                       <TableCell className="text-sm">{formatDate(call.startedAt ?? call.createdAt)}</TableCell>
                       <TableCell className="text-sm">{formatTime(call.startedAt ?? call.createdAt)}</TableCell>
-                      <TableCell
-                        className="max-w-[100px] truncate font-mono text-xs text-muted-foreground"
-                        title={call.uuid}
-                      >
-                        {call.uuid.substring(0, 8)}...
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1">
+                              <span
+                                className="max-w-[80px] truncate cursor-pointer hover:text-foreground"
+                                onClick={() => navigator.clipboard.writeText(call.uuid)}
+                              >
+                                {call.uuid.substring(0, 8)}...
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(call.uuid);
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="font-mono text-xs break-all">{call.uuid}</p>
+                            <p className="text-xs text-muted-foreground mt-1">Click to copy</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </TableCell>
-                      <TableCell
-                        className="max-w-[100px] truncate font-mono text-xs text-muted-foreground"
-                        title={call.twilioCallSid ?? '—'}
-                      >
-                        {call.twilioCallSid ? `${call.twilioCallSid.substring(0, 12)}...` : '—'}
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {call.twilioCallSid ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-1">
+                                <span
+                                  className="max-w-[80px] truncate cursor-pointer hover:text-foreground"
+                                  onClick={() => navigator.clipboard.writeText(call.twilioCallSid!)}
+                                >
+                                  {call.twilioCallSid.substring(0, 12)}...
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(call.twilioCallSid!);
+                                  }}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="font-mono text-xs break-all">{call.twilioCallSid}</p>
+                              <p className="text-xs text-muted-foreground mt-1">Click to copy</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <span>—</span>
+                        )}
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         <span
@@ -1052,6 +1102,20 @@ function EventRow({ event, dictionary }: EventRowProps) {
         <div className="text-sm text-muted-foreground">
           Digit:{' '}
           <span className="font-mono">{String(event.payload.digit ?? '')}</span>
+        </div>
+      );
+    }
+    if (event.type === 'interruption') {
+      const payload = event.payload as Record<string, unknown>;
+      const source = payload?.source ? String(payload.source) : 'user';
+      return (
+        <div className="text-sm text-amber-600 dark:text-amber-400">
+          <span className="font-medium">User interrupted the agent</span>
+          {source !== 'user' && (
+            <span className="ml-2 text-xs text-muted-foreground">
+              (via {source})
+            </span>
+          )}
         </div>
       );
     }

@@ -1,10 +1,11 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Server as HttpServer } from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
 import { TwilioNumber } from './twilio-number.entity';
 import { Agent, AgentStatus } from '../agents/agent.entity';
+import { WebhooksService } from '../webhooks/webhooks.service';
 
 /**
  * Twilio Media Stream Gateway
@@ -26,6 +27,8 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
     private readonly twilioNumberRepo: Repository<TwilioNumber>,
     @InjectRepository(Agent)
     private readonly agentRepo: Repository<Agent>,
+    @Inject(forwardRef(() => WebhooksService))
+    private readonly webhooksService: WebhooksService,
   ) {}
 
   onModuleInit() {
@@ -106,7 +109,7 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
 
               if (stsWs) {
                 isInitialized = true;
-                this.setupSTSHandlers(stsWs, twilioWs, streamSid);
+                this.setupSTSHandlers(stsWs, twilioWs, streamSid, callUuid);
               } else {
                 this.logger.error('Failed to connect to STS container');
                 twilioWs.close();
@@ -224,7 +227,7 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
   /**
    * Set up handlers for STS WebSocket messages
    */
-  private setupSTSHandlers(stsWs: WebSocket, twilioWs: WebSocket, streamSid: string | null) {
+  private setupSTSHandlers(stsWs: WebSocket, twilioWs: WebSocket, streamSid: string | null, callUuid: string | null) {
     stsWs.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString());
@@ -248,13 +251,43 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
             break;
 
           case 'transcript':
-            // Log transcripts (could also forward to client)
+            // Log and forward transcripts to webhooks service
             this.logger.debug(`Transcript [${message.role}]: ${message.text}`);
+            // Forward to webhooks service to create CallEvent record
+            if (callUuid && message.text) {
+              this.webhooksService
+                .handleEvent({
+                  uuid: callUuid,
+                  type: 'transcription',
+                  timestamp: new Date().toISOString(),
+                  payload: {
+                    role: message.role || 'unknown',
+                    text: message.text,
+                    source: 'twilio',
+                  },
+                })
+                .catch((err) =>
+                  this.logger.error(`Failed to save transcript: ${err.message}`),
+                );
+            }
             break;
 
           case 'interruption':
             // Handle barge-in/interruption
             this.logger.debug('User interruption detected');
+            // Forward to webhooks service
+            if (callUuid) {
+              this.webhooksService
+                .handleEvent({
+                  uuid: callUuid,
+                  type: 'interruption',
+                  timestamp: new Date().toISOString(),
+                  payload: { source: 'twilio' },
+                })
+                .catch((err) =>
+                  this.logger.error(`Failed to save interruption: ${err.message}`),
+                );
+            }
             // Send clear message to Twilio to stop playing audio
             if (twilioWs.readyState === WebSocket.OPEN && streamSid) {
               twilioWs.send(JSON.stringify({
