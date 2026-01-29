@@ -62,7 +62,7 @@ interface EnhancedCallDto {
   deepgramCost?: number | null;
   startedAt: string | null;
   endedAt: string | null;
-  createdAt?: string | null;
+  createdAt: string | null;
   hasRecording?: boolean;
   twilioCallSid?: string | null;
 }
