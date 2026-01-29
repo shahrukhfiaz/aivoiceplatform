@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PlusCircle, Pencil, Trash2, Shield, Eye, EyeOff, Phone, MessageSquare, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, Shield, Eye, EyeOff, Phone, MessageSquare, CheckCircle, XCircle, Loader2, Zap, Radio } from 'lucide-react';
 import { apiFetch, ApiError, type PaginatedResponse } from '@/lib/api';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
@@ -52,6 +52,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 const makeTwilioSchema = (dict: Dictionary) =>
   z.object({
@@ -68,6 +70,7 @@ const makeTwilioSchema = (dict: Dictionary) =>
       .min(1, dict.twilio.validation.accountSidRequired)
       .regex(/^AC[a-f0-9]{32}$/, dict.twilio.validation.accountSidFormat),
     authToken: z.string().optional(),
+    connectionType: z.enum(['sip-trunk', 'programmable-voice']),
     smsEnabled: z.boolean(),
     callsEnabled: z.boolean(),
     recordingEnabled: z.boolean(),
@@ -135,6 +138,7 @@ export default function TwilioPage() {
     label: '',
     accountSid: '',
     authToken: '',
+    connectionType: 'sip-trunk',
     smsEnabled: false,
     callsEnabled: true,
     recordingEnabled: false,
@@ -245,22 +249,39 @@ export default function TwilioPage() {
     }
     setSubmitting(true);
     try {
-      const body: Record<string, unknown> = {
-        phoneNumber: values.phoneNumber.trim(),
-        label: values.label.trim(),
-        accountSid: values.accountSid.trim(),
-        authToken: values.authToken?.trim(),
-        smsEnabled: values.smsEnabled,
-        callsEnabled: values.callsEnabled,
-        recordingEnabled: values.recordingEnabled,
-        denoiseEnabled: values.denoiseEnabled,
-        agentId: values.agentId || undefined,
-      };
+      if (values.connectionType === 'sip-trunk') {
+        // Use the new SIP trunk auto-provisioning endpoint
+        await apiFetch('/twilio-numbers/provision-sip', {
+          method: 'POST',
+          body: JSON.stringify({
+            accountSid: values.accountSid.trim(),
+            authToken: values.authToken?.trim(),
+            phoneNumber: values.phoneNumber.trim(),
+            label: values.label.trim(),
+            agentId: values.agentId || undefined,
+            recordingEnabled: values.recordingEnabled,
+            denoiseEnabled: values.denoiseEnabled,
+          }),
+        });
+      } else {
+        // Use existing Programmable Voice flow
+        const body: Record<string, unknown> = {
+          phoneNumber: values.phoneNumber.trim(),
+          label: values.label.trim(),
+          accountSid: values.accountSid.trim(),
+          authToken: values.authToken?.trim(),
+          smsEnabled: values.smsEnabled,
+          callsEnabled: values.callsEnabled,
+          recordingEnabled: values.recordingEnabled,
+          denoiseEnabled: values.denoiseEnabled,
+          agentId: values.agentId || undefined,
+        };
 
-      await apiFetch<TwilioNumberDto>('/twilio-numbers', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
+        await apiFetch<TwilioNumberDto>('/twilio-numbers', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+      }
       setDialogOpen(false);
       resetForms();
       await loadTwilioNumbers();
@@ -531,6 +552,53 @@ export default function TwilioPage() {
           </FormItem>
         )}
       />
+
+      {!isEdit && (
+        <FormField
+          control={formInstance.control}
+          name="connectionType"
+          render={({ field }) => (
+            <FormItem className="space-y-3">
+              <FormLabel>Connection Type</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  className="flex flex-col space-y-2"
+                >
+                  <div className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value="sip-trunk" id="sip-trunk" className="mt-1" />
+                    <Label htmlFor="sip-trunk" className="cursor-pointer flex-1">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-green-500" />
+                        <span className="font-medium">SIP Trunk (Recommended)</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Lower latency (~50ms), unified recording via Asterisk MixMonitor.
+                        Auto-configures Twilio Elastic SIP Trunking.
+                      </p>
+                    </Label>
+                  </div>
+                  <div className="flex items-start space-x-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                    <RadioGroupItem value="programmable-voice" id="programmable-voice" className="mt-1" />
+                    <Label htmlFor="programmable-voice" className="cursor-pointer flex-1">
+                      <div className="flex items-center gap-2">
+                        <Radio className="h-4 w-4 text-blue-500" />
+                        <span className="font-medium">Programmable Voice</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Media Streams via WebSocket (~200ms latency).
+                        Uses TwiML webhooks for call handling.
+                      </p>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
 
       <FormField
         control={formInstance.control}

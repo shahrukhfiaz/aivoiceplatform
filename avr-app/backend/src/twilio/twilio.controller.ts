@@ -17,7 +17,7 @@ import { UserRole } from '../users/user.entity';
 import { CreateTwilioNumberDto } from './dto/create-twilio-number.dto';
 import { UpdateTwilioNumberDto } from './dto/update-twilio-number.dto';
 import { TwilioNumberResponse, TwilioService } from './twilio.service';
-import { TwilioTrunkService, CreateTwilioTrunkDto } from './twilio-trunk.service';
+import { TwilioTrunkService, CreateTwilioTrunkDto, ProvisionSipTrunkDto, ProvisionSipTrunkResult } from './twilio-trunk.service';
 import { Trunk } from '../trunks/trunk.entity';
 
 @Controller('twilio-numbers')
@@ -64,6 +64,16 @@ export class TwilioController {
   @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.VIEWER)
   findAllSipTrunks(): Promise<Trunk[]> {
     return this.twilioTrunkService.findAllTwilioTrunks();
+  }
+
+  /**
+   * Auto-provision a complete Twilio SIP trunk via Twilio API
+   * This automatically creates the trunk, origination URL, and associates the phone number
+   */
+  @Post('provision-sip')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  provisionSipTrunk(@Body() dto: ProvisionSipTrunkDto): Promise<ProvisionSipTrunkResult> {
+    return this.twilioTrunkService.provisionTwilioSipTrunk(dto);
   }
 
   @Get()

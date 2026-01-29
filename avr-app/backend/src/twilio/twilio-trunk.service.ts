@@ -15,6 +15,22 @@ export interface CreateTwilioTrunkDto {
   denoiseEnabled?: boolean;
 }
 
+export interface ProvisionSipTrunkDto {
+  accountSid: string;
+  authToken: string;
+  phoneNumber: string;
+  label: string;
+  agentId: string;
+  recordingEnabled?: boolean;
+  denoiseEnabled?: boolean;
+}
+
+export interface ProvisionSipTrunkResult {
+  trunk: Trunk;
+  twilioTrunkSid: string;
+  originationUrlSid: string;
+}
+
 @Injectable()
 export class TwilioTrunkService {
   private readonly logger = new Logger(TwilioTrunkService.name);
@@ -125,6 +141,110 @@ export class TwilioTrunkService {
       },
       relations: ['agent'],
     });
+  }
+
+  /**
+   * Provision a complete Twilio SIP trunk via Twilio API
+   * This automatically:
+   * 1. Creates a SIP trunk in Twilio
+   * 2. Creates an origination URL pointing to our Asterisk server
+   * 3. Associates the phone number with the trunk
+   * 4. Creates the local trunk in our database
+   */
+  async provisionTwilioSipTrunk(dto: ProvisionSipTrunkDto): Promise<ProvisionSipTrunkResult> {
+    this.logger.log(`Provisioning Twilio SIP trunk for ${dto.phoneNumber}`);
+
+    // Validate agent exists
+    const agent = await this.agentRepository.findOne({
+      where: { id: dto.agentId },
+    });
+    if (!agent) {
+      throw new NotFoundException('Agent not found');
+    }
+
+    // Import Twilio client
+    const twilio = await import('twilio');
+    const client = twilio.default(dto.accountSid, dto.authToken);
+
+    try {
+      // 1. Get the phone number SID from Twilio
+      const normalizedPhone = this.normalizePhoneNumber(dto.phoneNumber);
+      const numbers = await client.incomingPhoneNumbers.list({
+        phoneNumber: normalizedPhone,
+      });
+
+      if (numbers.length === 0) {
+        throw new BadRequestException(`Phone number ${normalizedPhone} not found in your Twilio account`);
+      }
+
+      const phoneNumberSid = numbers[0].sid;
+      this.logger.log(`Found phone number SID: ${phoneNumberSid}`);
+
+      // 2. Create the Twilio SIP Trunk
+      const trunkName = `dsai-${dto.label.replace(/[^a-zA-Z0-9-]/g, '-')}`;
+      const domainName = `dsai-${Date.now()}.pstn.twilio.com`;
+
+      const twilioTrunk = await client.trunking.v1.trunks.create({
+        friendlyName: trunkName,
+        domainName: domainName,
+      });
+
+      this.logger.log(`Created Twilio SIP trunk: ${twilioTrunk.sid}`);
+
+      // 3. Create Origination URL (points incoming calls to our Asterisk)
+      const publicIp = process.env.PUBLIC_IP || process.env.PUBLIC_URL?.replace(/https?:\/\//, '').split(':')[0];
+      if (!publicIp) {
+        // Clean up the trunk we just created
+        await client.trunking.v1.trunks(twilioTrunk.sid).remove();
+        throw new BadRequestException('PUBLIC_IP environment variable not set');
+      }
+
+      const originationUrl = await client.trunking.v1
+        .trunks(twilioTrunk.sid)
+        .originationUrls.create({
+          friendlyName: 'Asterisk Server',
+          sipUrl: `sip:${publicIp}:5060`,
+          weight: 10,
+          priority: 10,
+          enabled: true,
+        });
+
+      this.logger.log(`Created origination URL: ${originationUrl.sid} -> sip:${publicIp}:5060`);
+
+      // 4. Associate the phone number with the trunk
+      await client.trunking.v1
+        .trunks(twilioTrunk.sid)
+        .phoneNumbers.create({
+          phoneNumberSid: phoneNumberSid,
+        });
+
+      this.logger.log(`Associated phone number ${normalizedPhone} with trunk ${twilioTrunk.sid}`);
+
+      // 5. Create the local trunk in our database
+      const trunk = await this.createTwilioTrunk({
+        name: dto.label,
+        phoneNumber: dto.phoneNumber,
+        agentId: dto.agentId,
+        recordingEnabled: dto.recordingEnabled,
+        denoiseEnabled: dto.denoiseEnabled,
+      });
+
+      this.logger.log(`Provisioning complete: Local trunk ${trunk.id}, Twilio trunk ${twilioTrunk.sid}`);
+
+      return {
+        trunk,
+        twilioTrunkSid: twilioTrunk.sid,
+        originationUrlSid: originationUrl.sid,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to provision Twilio SIP trunk: ${error}`);
+
+      // Re-throw with more context if it's a Twilio error
+      if (error instanceof Error && error.message.includes('Twilio')) {
+        throw new BadRequestException(`Twilio API error: ${error.message}`);
+      }
+      throw error;
+    }
   }
 
   /**
