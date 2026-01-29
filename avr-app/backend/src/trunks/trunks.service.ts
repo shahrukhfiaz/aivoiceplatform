@@ -83,14 +83,24 @@ export class TrunksService {
 
     const saved = await this.trunksRepository.save(trunk);
 
+    // Reload with relations to ensure agent is available for dialplan provisioning
+    const reloaded = await this.trunksRepository.findOne({
+      where: { id: saved.id },
+      relations: ['agent'],
+    });
+
+    if (!reloaded) {
+      throw new Error('Failed to reload trunk after save');
+    }
+
     try {
-      await this.asteriskService.provisionTrunk(saved);
+      await this.asteriskService.provisionTrunk(reloaded);
     } catch (error) {
       await this.trunksRepository.delete(saved.id);
       throw error;
     }
 
-    return saved;
+    return reloaded;
   }
 
   async findAll(query: PaginationQuery): Promise<PaginatedResult<Trunk>> {

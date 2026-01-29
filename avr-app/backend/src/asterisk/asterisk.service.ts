@@ -106,7 +106,8 @@ export class AsteriskService {
     );
 
     // For inbound trunks with DID and agent, add inbound dialplan entry
-    if (trunk.direction === 'inbound' && trunk.didNumber && trunk.agent) {
+    // Check both agent relation and agentId to ensure we catch all cases
+    if (trunk.direction === 'inbound' && trunk.didNumber && (trunk.agent || trunk.agentId)) {
       await this.upsertBlock(
         this.extensionsPath,
         `trunk-dialplan-${trunk.id}`,
