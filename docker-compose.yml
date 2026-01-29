@@ -9,7 +9,7 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      # Dedicated WebSocket entrypoint on port 8443 (TCP passthrough to Asterisk TLS)
+      # Dedicated WebSocket entrypoint on port 8443 (HTTP routing with TLS termination)
       - "--entrypoints.websocket.address=:8443"
       - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@digitalstorming.com}"
@@ -42,11 +42,13 @@ services:
       - "10000-10050:10000-10050/udp"
     labels:
       - "traefik.enable=true"
-      # TCP passthrough for WebSocket on port 8443 -> Asterisk TLS port 8089
-      - "traefik.tcp.routers.asterisk-wss.rule=HostSNI(`${DOMAIN:-ai.digitalstorming.com}`)"
-      - "traefik.tcp.routers.asterisk-wss.entrypoints=websocket"
-      - "traefik.tcp.routers.asterisk-wss.tls.passthrough=true"
-      - "traefik.tcp.services.asterisk-wss.loadbalancer.server.port=8089"
+      # HTTP routing with TLS termination at Traefik for WebSocket
+      # Traefik uses Let's Encrypt cert, forwards plain WS to Asterisk port 8090
+      - "traefik.http.routers.asterisk-ws.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`)"
+      - "traefik.http.routers.asterisk-ws.entrypoints=websocket"
+      - "traefik.http.routers.asterisk-ws.tls=true"
+      - "traefik.http.routers.asterisk-ws.tls.certresolver=letsencrypt"
+      - "traefik.http.services.asterisk-ws.loadbalancer.server.port=8090"
     volumes:
       - ./avr-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
       - ./avr-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
