@@ -255,8 +255,9 @@ export class WebhooksService {
     if (filters.sortField === 'endedAt') {
       qb.orderBy('call.endedAt', sortDirection).addOrderBy('call.id', 'DESC');
     } else {
-      // Use COALESCE to handle NULL startedAt
-      qb.orderBy('COALESCE(call.startedAt, call.createdAt)', sortDirection).addOrderBy('call.id', 'DESC');
+      // Use COALESCE to handle NULL startedAt - add as virtual column for sorting
+      qb.addSelect('COALESCE(call.startedAt, call.createdAt)', 'sortDate');
+      qb.orderBy('sortDate', sortDirection).addOrderBy('call.id', 'DESC');
     }
 
     const { skip, take, page, limit } = getPagination(paginationQuery);
@@ -541,7 +542,8 @@ export class WebhooksService {
     } else {
       // Use COALESCE to handle NULL startedAt (e.g., Twilio calls before status callback)
       // Falls back to createdAt so new calls appear at the top
-      qb.orderBy('COALESCE(call.startedAt, call.createdAt)', sortDirection).addOrderBy('call.id', 'DESC');
+      qb.addSelect('COALESCE(call.startedAt, call.createdAt)', 'sortDate');
+      qb.orderBy('sortDate', sortDirection).addOrderBy('call.id', 'DESC');
     }
 
     const { skip, take, page, limit } = getPagination(paginationQuery);
