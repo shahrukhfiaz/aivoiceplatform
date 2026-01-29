@@ -181,6 +181,7 @@ export class WebhooksController {
           deepgramCost: call.deepgramCost ?? null,
           startedAt: call.startedAt,
           endedAt: call.endedAt,
+          createdAt: call.createdAt,
           hasRecording: recording !== null,
           twilioCallSid: call.twilioCallSid ?? null,
         };

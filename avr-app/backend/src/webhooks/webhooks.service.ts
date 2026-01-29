@@ -230,29 +230,34 @@ export class WebhooksService {
       qb.andWhere('call.uuid LIKE :uuid', { uuid: `%${filters.uuid}%` });
     }
 
+    // Use COALESCE for date filters to include calls with NULL startedAt (e.g., Twilio calls)
     if (filters.since) {
-      qb.andWhere('call.startedAt >= :since', {
+      qb.andWhere('COALESCE(call.startedAt, call.createdAt) >= :since', {
         since: filters.since.toISOString(),
       });
     }
 
     const startedFrom = this.parseDate(filters.startedFrom);
     if (startedFrom) {
-      qb.andWhere('call.startedAt >= :startedFrom', {
+      qb.andWhere('COALESCE(call.startedAt, call.createdAt) >= :startedFrom', {
         startedFrom: startedFrom.toISOString(),
       });
     }
 
     const startedTo = this.parseDate(filters.startedTo, true);
     if (startedTo) {
-      qb.andWhere('call.startedAt <= :startedTo', {
+      qb.andWhere('COALESCE(call.startedAt, call.createdAt) <= :startedTo', {
         startedTo: startedTo.toISOString(),
       });
     }
 
-    const sortField = filters.sortField === 'endedAt' ? 'call.endedAt' : 'call.startedAt';
     const sortDirection = filters.sortDirection === 'asc' ? 'ASC' : 'DESC';
-    qb.orderBy(sortField, sortDirection).addOrderBy('call.id', 'DESC');
+    if (filters.sortField === 'endedAt') {
+      qb.orderBy('call.endedAt', sortDirection).addOrderBy('call.id', 'DESC');
+    } else {
+      // Use COALESCE to handle NULL startedAt
+      qb.orderBy('COALESCE(call.startedAt, call.createdAt)', sortDirection).addOrderBy('call.id', 'DESC');
+    }
 
     const { skip, take, page, limit } = getPagination(paginationQuery);
     qb.skip(skip).take(take);
@@ -488,7 +493,7 @@ export class WebhooksService {
     }
 
     if (filters.status === 'in_progress') {
-      qb.andWhere('call.startedAt IS NOT NULL');
+      // In progress = not ended yet (includes Twilio calls without startedAt)
       qb.andWhere('call.endedAt IS NULL');
     } else if (filters.status === 'completed') {
       qb.andWhere('call.endedAt IS NOT NULL');
@@ -509,22 +514,23 @@ export class WebhooksService {
       qb.andWhere('call.uuid LIKE :uuid', { uuid: `%${filters.uuid}%` });
     }
 
+    // Use COALESCE for date filters to include calls with NULL startedAt (e.g., Twilio calls)
     if (filters.since) {
-      qb.andWhere('call.startedAt >= :since', {
+      qb.andWhere('COALESCE(call.startedAt, call.createdAt) >= :since', {
         since: filters.since.toISOString(),
       });
     }
 
     const startedFrom = this.parseDate(filters.startedFrom);
     if (startedFrom) {
-      qb.andWhere('call.startedAt >= :startedFrom', {
+      qb.andWhere('COALESCE(call.startedAt, call.createdAt) >= :startedFrom', {
         startedFrom: startedFrom.toISOString(),
       });
     }
 
     const startedTo = this.parseDate(filters.startedTo, true);
     if (startedTo) {
-      qb.andWhere('call.startedAt <= :startedTo', {
+      qb.andWhere('COALESCE(call.startedAt, call.createdAt) <= :startedTo', {
         startedTo: startedTo.toISOString(),
       });
     }

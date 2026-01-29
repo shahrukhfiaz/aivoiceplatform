@@ -62,6 +62,7 @@ interface EnhancedCallDto {
   deepgramCost?: number | null;
   startedAt: string | null;
   endedAt: string | null;
+  createdAt?: string | null;
   hasRecording?: boolean;
   twilioCallSid?: string | null;
 }
@@ -684,8 +685,8 @@ export default function CallsPage() {
                 <TableBody>
                   {calls.map((call) => (
                     <TableRow key={call.id}>
-                      <TableCell className="text-sm">{formatDate(call.startedAt)}</TableCell>
-                      <TableCell className="text-sm">{formatTime(call.startedAt)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(call.startedAt ?? call.createdAt)}</TableCell>
+                      <TableCell className="text-sm">{formatTime(call.startedAt ?? call.createdAt)}</TableCell>
                       <TableCell
                         className="max-w-[100px] truncate font-mono text-xs text-muted-foreground"
                         title={call.uuid}
