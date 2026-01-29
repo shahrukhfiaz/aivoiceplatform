@@ -1,0 +1,65 @@
+services:
+  avr-asterisk:
+    image: agentvoiceresponse/avr-asterisk
+    platform: linux/x86_64
+    container_name: avr-asterisk
+    restart: unless-stopped
+    ports:
+      - "5038:5038"    # AMI
+      - "5060:5060"    # SIP
+      - "9088:8088"    # ARI HTTP (mapped from 8088)
+      - "9089:8089"    # ARI HTTPS/WebSocket WSS (mapped from 8089)
+      - "9090:8090"    # WebSocket WS (mapped from 8090)
+      - "10000-10050:10000-10050/udp"  # RTP
+    volumes:
+      - ./avr-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
+      - ./avr-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
+      - ./avr-infra/asterisk/conf/extensions.conf:/etc/asterisk/my_extensions.conf
+      - ./avr-infra/asterisk/conf/queues.conf:/etc/asterisk/my_queues.conf
+      - ./avr-infra/asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
+      - ./avr-infra/asterisk/recordings:/var/spool/asterisk/monitor
+    networks:
+      - avr
+    environment:
+      - ARI_USERNAME=asterisk
+      - ARI_PASSWORD=asterisk
+
+  avr-ami:
+    image: agentvoiceresponse/avr-ami
+    platform: linux/x86_64
+    container_name: avr-ami
+    restart: unless-stopped
+    environment:
+      - PORT=6006
+      - AMI_HOST=avr-asterisk
+      - AMI_PORT=5038
+      - AMI_USERNAME=avr
+      - AMI_PASSWORD=avr
+    ports:
+      - "6006:6006"
+    networks:
+      - avr
+    depends_on:
+      - avr-asterisk
+
+  avr-phone:
+    build:
+      context: ./avr-phone
+      dockerfile: Dockerfile
+    platform: linux/x86_64
+    container_name: avr-phone
+    restart: unless-stopped
+    ports:
+      - "9080:80"
+    networks:
+      - avr
+    environment:
+      - NEXT_PUBLIC_SIP_SERVER=localhost:8089
+      - NEXT_PUBLIC_SIP_USERNAME=1000
+      - NEXT_PUBLIC_SIP_PASSWORD=1000
+
+networks:
+  avr:
+    name: avr
+    external: true
+

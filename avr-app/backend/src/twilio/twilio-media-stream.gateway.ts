@@ -181,10 +181,11 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
       }
 
       // Build STS WebSocket URL
-      // The STS container runs on the dsai network with the agent's port
-      // We need to connect using the container name or IP
+      // The STS container runs on its own internal port (6678), not the agent's AudioSocket port
+      // The agent's port (e.g., 5957) is for AudioSocket connections from Asterisk
       const stsContainerName = `dsai-sts-${agentId}`;
-      const stsUrl = `ws://${stsContainerName}:${agentPort}`;
+      const stsPort = 6678; // STS container always uses port 6678 internally
+      const stsUrl = `ws://${stsContainerName}:${stsPort}`;
 
       this.logger.log(`Connecting to STS at ${stsUrl}`);
 

@@ -1,0 +1,16 @@
+services:
+  avr-app-backend:
+    ports:
+      - "3001:3001"
+    environment:
+      - FRONTEND_URL=http://localhost:3000
+
+  avr-app-frontend:
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+
+  traefik:
+    profiles:
+      - disabled

@@ -1,0 +1,71 @@
+# AVR Cloud Server Deployment Commands
+# Server: 192.241.179.25
+# Username: root
+# Password: Seahub123@
+#
+# These commands can be executed using plink or pscp
+#
+# Prerequisites: Download plink.exe from PuTTY website
+# https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html
+
+# ============================================
+# OPTION 1: Execute commands directly with plink
+# ============================================
+
+# Update system
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "apt-get update -y && apt-get upgrade -y"
+
+# Install prerequisites
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "apt-get install -y curl wget git apt-transport-https ca-certificates gnupg lsb-release"
+
+# Install Docker
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \$(lsb_release -cs) stable' | tee /etc/apt/sources.list.d/docker.list > /dev/null"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "apt-get update -y"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin"
+
+# Install Docker Compose (standalone)
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "curl -L 'https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64' -o /usr/local/bin/docker-compose"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "chmod +x /usr/local/bin/docker-compose"
+
+# Start Docker
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "systemctl start docker && systemctl enable docker"
+
+# Create AVR directory
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "mkdir -p /opt/avr"
+
+# Clone repositories
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "cd /opt/avr && git clone https://github.com/agentvoiceresponse/avr-infra.git"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "cd /opt/avr && git clone https://github.com/agentvoiceresponse/avr-app.git"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "cd /opt/avr && git clone https://github.com/agentvoiceresponse/avr-sts-deepgram.git"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "cd /opt/avr && git clone https://github.com/agentvoiceresponse/avr-ami.git"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "cd /opt/avr && git clone https://github.com/agentvoiceresponse/avr-webhook.git"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "cd /opt/avr && git clone https://github.com/agentvoiceresponse/avr-phone.git"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "cd /opt/avr && git clone https://github.com/agentvoiceresponse/avr-asterisk.git"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "cd /opt/avr && git clone https://github.com/agentvoiceresponse/avr-vad.git"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "cd /opt/avr && git clone https://github.com/agentvoiceresponse/avr-docs.git"
+
+# System optimizations
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "echo '* soft nofile 65536' >> /etc/security/limits.conf"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "echo '* hard nofile 65536' >> /etc/security/limits.conf"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "echo 'net.core.rmem_max = 16777216' >> /etc/sysctl.conf"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "echo 'net.core.wmem_max = 16777216' >> /etc/sysctl.conf"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "echo 'net.ipv4.udp_mem = 8388608 12582912 16777216' >> /etc/sysctl.conf"
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "sysctl -p"
+
+# Create Docker network
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "docker network create avr 2>/dev/null || true"
+
+# Verify installation
+plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "docker --version && docker-compose --version && ls -la /opt/avr"
+
+# ============================================
+# OPTION 2: Upload and execute script
+# ============================================
+
+# First, upload the deployment script using pscp:
+# pscp.exe -pw Seahub123@ deploy_avr_cloud.sh root@192.241.179.25:/root/
+
+# Then execute it:
+# plink.exe -ssh -pw Seahub123@ root@192.241.179.25 "chmod +x /root/deploy_avr_cloud.sh && /root/deploy_avr_cloud.sh"
+

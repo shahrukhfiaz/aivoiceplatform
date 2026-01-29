@@ -1,0 +1,164 @@
+services:
+  traefik:
+    image: traefik:v3.6
+    container_name: traefik
+    restart: always
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@callbust.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - avr
+
+  avr-core:
+    image: agentvoiceresponse/avr-core
+    platform: linux/x86_64
+    container_name: avr-core
+    restart: always
+    environment:
+      - PORT=5001
+      - STS_URL=ws://avr-sts-deepgram:6033
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://avr-app-backend:3001/webhooks}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+    ports:
+      - 5001:5001
+    networks:
+      - avr
+
+  avr-sts-deepgram:
+    image: agentvoiceresponse/avr-sts-deepgram
+    platform: linux/x86_64
+    container_name: avr-sts-deepgram
+    restart: always
+    environment:
+      - PORT=6033
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+      - AGENT_PROMPT=${AGENT_PROMPT:-You are a helpful assistant. Be friendly and professional.}
+      - AMI_URL=http://avr-ami:6006
+    networks:
+      - avr
+
+  avr-asterisk:
+    image: agentvoiceresponse/avr-asterisk
+    platform: linux/x86_64
+    container_name: avr-asterisk
+    restart: always
+    ports:
+      - 5038:5038
+      - 5060:5060
+      - 9088:8088    # ARI HTTP (mapped from 8088)
+      - 9089:8089    # ARI HTTPS/WebSocket WSS (mapped from 8089)
+      - 9090:8090    # WebSocket WS (mapped from 8090)
+      - 10000-10050:10000-10050/udp
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.asterisk-wss.entrypoints=websecure
+      - traefik.http.routers.asterisk-wss.rule=Host(`agent.callbust.com`) && Path(`/ws`)
+      - traefik.http.routers.asterisk-wss.tls=true
+      - traefik.http.routers.asterisk-wss.tls.certresolver=letsencrypt
+      - traefik.http.routers.asterisk-wss.service=asterisk-wss
+      - traefik.http.services.asterisk-wss.loadbalancer.server.port=8088
+      - traefik.http.services.asterisk-wss.loadbalancer.server.scheme=http
+    volumes:
+      - ./asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
+      - ./asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
+      - ./asterisk/conf/extensions.conf:/etc/asterisk/my_extensions.conf
+      - ./asterisk/conf/queues.conf:/etc/asterisk/my_queues.conf
+      - ./asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
+      - ./asterisk/recordings:/var/spool/asterisk/monitor
+    networks:
+      - avr
+
+  avr-ami:
+    image: agentvoiceresponse/avr-ami
+    platform: linux/x86_64
+    container_name: avr-ami
+    restart: always
+    environment:
+      - PORT=6006
+      - AMI_HOST=avr-asterisk
+      - AMI_PORT=5038
+      - AMI_USERNAME=${AMI_USERNAME:-avr}
+      - AMI_PASSWORD=${AMI_PASSWORD:-avr}
+    networks:
+      - avr
+
+  avr-app-backend:
+    image: agentvoiceresponse/avr-app-backend
+    platform: linux/x86_64
+    container_name: avr-app-backend
+    restart: always
+    environment:
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret-key-in-production}
+      - FRONTEND_URL=https://agent.callbust.com
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      - WEBHOOK_URL=http://avr-app-backend:3001/webhooks
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-change-this-webhook-secret}
+      - ARI_URL=http://avr-asterisk:8088/ari
+      - ARI_USERNAME=${ARI_USERNAME:-avr}
+      - ARI_PASSWORD=${ARI_PASSWORD:-avr}
+      - TENANT=${TENANT:-demo}
+      - CORE_DEFAULT_IMAGE=agentvoiceresponse/avr-core
+      - DB_TYPE=sqlite
+      - DB_DATABASE=/app/data/data.db
+      - ASTERISK_CONFIG_PATH=/app/asterisk
+      - ASTERISK_MONITOR_PATH=/app/recordings
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.avr-app-backend.entrypoints=websecure
+      - traefik.http.routers.avr-app-backend.rule=Host(`agent.callbust.com`) && PathPrefix(`/api`)
+      - traefik.http.routers.avr-app-backend.tls=true
+      - traefik.http.routers.avr-app-backend.tls.certresolver=letsencrypt
+      - traefik.http.routers.avr-app-backend.middlewares=strip-api
+      - traefik.http.middlewares.strip-api.stripprefix.prefixes=/api
+      - traefik.http.services.avr-app-backend.loadbalancer.server.port=3001
+    volumes:
+      - ./asterisk/conf:/app/asterisk
+      - ./data:/app/data
+      - ./asterisk/recordings:/app/recordings
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - avr
+
+  avr-app-frontend:
+    image: agentvoiceresponse/avr-app-frontend
+    platform: linux/x86_64
+    container_name: avr-app-frontend
+    restart: always
+    environment:
+      - NEXT_PUBLIC_API_URL=https://agent.callbust.com/api
+      - NEXT_PUBLIC_WEBRTC_CLIENT_URL=https://phone.agentvoiceresponse.com/index.html
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.avr-app-frontend.entrypoints=websecure
+      - traefik.http.routers.avr-app-frontend.rule=Host(`agent.callbust.com`)
+      - traefik.http.routers.avr-app-frontend.tls=true
+      - traefik.http.routers.avr-app-frontend.tls.certresolver=letsencrypt
+      - traefik.http.services.avr-app-frontend.loadbalancer.server.port=3000
+    networks:
+      - avr
+
+networks:
+  avr:
+    name: avr
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
