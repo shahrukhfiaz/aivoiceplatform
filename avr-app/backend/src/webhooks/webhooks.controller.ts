@@ -177,9 +177,12 @@ export class WebhooksController {
           providerName: call.providerName,
           endReason: call.endReason,
           cost: call.cost,
+          twilioCost: call.twilioCost ?? null,
+          deepgramCost: call.deepgramCost ?? null,
           startedAt: call.startedAt,
           endedAt: call.endedAt,
           hasRecording: recording !== null,
+          twilioCallSid: call.twilioCallSid ?? null,
         };
       }),
     );

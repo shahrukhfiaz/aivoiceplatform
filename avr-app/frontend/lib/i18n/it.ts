@@ -766,6 +766,7 @@ export const itDictionary = {
       endReason: 'Motivo Fine',
       cost: 'Costo',
       transcript: 'Trascrizione',
+      twilioCallSid: 'Twilio SID',
     },
     buttons: {
       view: 'Dettagli',
@@ -819,6 +820,11 @@ export const itDictionary = {
       failed: 'Fallita',
       no_answer: 'Nessuna Risposta',
       in_progress: 'In Corso',
+    },
+    costBreakdown: {
+      total: 'Totale',
+      deepgram: 'Deepgram',
+      twilio: 'Twilio',
     },
     errors: {
       loadCalls: 'Impossibile caricare le chiamate',

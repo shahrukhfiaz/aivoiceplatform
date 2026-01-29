@@ -28,6 +28,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { TranscriptDialog } from '@/components/transcript-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface AgentDto {
   id: string;
@@ -53,9 +58,12 @@ interface EnhancedCallDto {
   providerName?: string | null;
   endReason?: string | null;
   cost?: number | null;
+  twilioCost?: number | null;
+  deepgramCost?: number | null;
   startedAt: string | null;
   endedAt: string | null;
   hasRecording?: boolean;
+  twilioCallSid?: string | null;
 }
 
 // Legacy interface for backward compatibility
@@ -660,6 +668,7 @@ export default function CallsPage() {
                     </TableHead>
                     <TableHead>{dictionary.calls.table.time ?? 'Time'}</TableHead>
                     <TableHead>{dictionary.calls.table.callId ?? 'Call ID'}</TableHead>
+                    <TableHead>{dictionary.calls.table.twilioCallSid ?? 'Twilio SID'}</TableHead>
                     <TableHead>{dictionary.calls.table.phoneFrom ?? 'From'}</TableHead>
                     <TableHead>{dictionary.calls.table.phoneTo ?? 'To'}</TableHead>
                     <TableHead>{dictionary.calls.table.agentName ?? 'Agent'}</TableHead>
@@ -682,6 +691,12 @@ export default function CallsPage() {
                         title={call.uuid}
                       >
                         {call.uuid.substring(0, 8)}...
+                      </TableCell>
+                      <TableCell
+                        className="max-w-[100px] truncate font-mono text-xs text-muted-foreground"
+                        title={call.twilioCallSid ?? '—'}
+                      >
+                        {call.twilioCallSid ? `${call.twilioCallSid.substring(0, 12)}...` : '—'}
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         <span
@@ -709,7 +724,31 @@ export default function CallsPage() {
                       <TableCell className="text-sm">{formatDuration(call.startedAt, call.endedAt)}</TableCell>
                       <TableCell>{getEndReasonBadge(call.endReason, call.endedAt)}</TableCell>
                       <TableCell className="text-sm">
-                        {call.cost != null ? `$${Number(call.cost).toFixed(2)}` : '—'}
+                        {call.cost != null ? (
+                          <Tooltip>
+                            <TooltipTrigger className="cursor-help underline decoration-dotted underline-offset-4">
+                              ${Number(call.cost).toFixed(2)}
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between gap-4">
+                                  <span>{dictionary.calls.costBreakdown?.total ?? 'Total'}:</span>
+                                  <span className="font-mono">${Number(call.cost).toFixed(4)}</span>
+                                </div>
+                                <div className="flex justify-between gap-4 text-muted-foreground">
+                                  <span>{dictionary.calls.costBreakdown?.deepgram ?? 'Deepgram'}:</span>
+                                  <span className="font-mono">${call.deepgramCost != null ? Number(call.deepgramCost).toFixed(4) : '0.0000'}</span>
+                                </div>
+                                <div className="flex justify-between gap-4 text-muted-foreground">
+                                  <span>{dictionary.calls.costBreakdown?.twilio ?? 'Twilio'}:</span>
+                                  <span className="font-mono">${call.twilioCost != null ? Number(call.twilioCost).toFixed(4) : '0.0000'}</span>
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          '—'
+                        )}
                       </TableCell>
                       <TableCell>
                         {recordingAvailableById[call.id] ? (

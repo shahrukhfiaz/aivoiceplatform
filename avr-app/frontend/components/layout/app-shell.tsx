@@ -221,9 +221,9 @@ function AppShellContent({
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <SidebarOverlay />
-      <Sidebar className="sticky top-0 h-screen w-64 border-border bg-card/60 backdrop-blur">
+      <Sidebar className="fixed left-0 top-0 z-40 h-screen w-64 shrink-0 border-border bg-card/60 backdrop-blur md:sticky">
         <div className="flex h-full flex-col px-6 py-6">
           <SidebarHeader className="mb-6 shrink-0 border-none p-0">
             <div className="flex items-center gap-3">
@@ -238,7 +238,7 @@ function AppShellContent({
               </div>
             </div>
           </SidebarHeader>
-          <SidebarContent className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-0 text-sm font-medium">
+          <SidebarContent className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto scrollbar-hide p-0 text-sm font-medium">
             <SidebarGroup className="gap-3">
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -447,8 +447,8 @@ function AppShellContent({
           </SidebarFooter>
         </div>
       </Sidebar>
-      <SidebarInset>
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/80 bg-background/80 px-6 py-4 backdrop-blur">
+      <SidebarInset className="flex h-screen flex-col overflow-hidden">
+        <header className="shrink-0 z-30 flex items-center justify-between border-b border-border/80 bg-background/80 px-6 py-4 backdrop-blur">
           <div className="flex items-center gap-3">
             <SidebarTrigger asChild>
               <Button
@@ -498,7 +498,7 @@ function AppShellContent({
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
-          className="flex-1 space-y-6 px-6 py-6"
+          className="flex-1 space-y-6 overflow-y-auto px-6 py-6"
         >
           {children}
         </motion.main>
@@ -529,7 +529,7 @@ function AppShellContent({
               </Button>
             </div>
             <iframe
-              src={webRtcClientUrl}
+              src={webRtcClientUrl ? `${webRtcClientUrl}?autoLogin=true&user=2000&pass=2000&name=Admin` : undefined}
               title="WebRTC Phone"
               className="h-full w-full border-0"
               allow="camera; microphone; autoplay"

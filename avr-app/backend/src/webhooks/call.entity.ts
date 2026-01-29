@@ -44,6 +44,18 @@ export class Call {
   @Column({ type: 'text', nullable: true })
   endReason?: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  twilioCallSid?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  twilioNumberId?: string | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+  twilioCost?: number | null;
+
+  @Column({ type: 'decimal', precision: 10, scale: 6, nullable: true })
+  deepgramCost?: number | null;
+
   @Column({ type: 'decimal', precision: 10, scale: 4, nullable: true })
   cost?: number | null;
 

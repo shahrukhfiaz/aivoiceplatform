@@ -131,6 +131,16 @@ export class WebhooksService {
       call.fromNumber = payload.from ? String(payload.from) : null;
       call.toNumber = payload.to ? String(payload.to) : null;
 
+      // Store Twilio call SID if present (for status callback lookups)
+      if (payload.twilioCallSid) {
+        call.twilioCallSid = String(payload.twilioCallSid);
+      }
+
+      // Store Twilio number ID if present (for fetching cost later)
+      if (payload.twilioNumberId) {
+        call.twilioNumberId = String(payload.twilioNumberId);
+      }
+
       // Determine call type based on direction or channel pattern
       const direction = payload.direction as string | undefined;
       if (direction === 'outbound' || direction === 'out') {
@@ -655,11 +665,14 @@ export class WebhooksService {
       new Date(call.endedAt),
     );
 
-    if (actualCost !== null && actualCost !== call.cost) {
+    if (actualCost !== null) {
       this.logger.log(
-        `Updated cost for call ${call.uuid}: $${call.cost} -> $${actualCost}`,
+        `Updated Deepgram cost for call ${call.uuid}: $${actualCost}`,
       );
-      call.cost = actualCost;
+      call.deepgramCost = actualCost;
+      // Recalculate total cost (Deepgram cost + Twilio cost)
+      const twilioCost = call.twilioCost ? Number(call.twilioCost) : 0;
+      call.cost = actualCost + twilioCost;
       await this.callRepository.save(call);
     }
   }
@@ -723,5 +736,96 @@ export class WebhooksService {
       await this.callRepository.save(call);
       this.logger.log(`Updated call ${uuid} status to failed: ${reason}`);
     }
+  }
+
+  /**
+   * Find a call by Twilio Call SID
+   */
+  async findByTwilioCallSid(twilioCallSid: string): Promise<Call | null> {
+    return this.callRepository.findOne({
+      where: { twilioCallSid },
+      relations: ['events'],
+    });
+  }
+
+  /**
+   * Handle Twilio status callback events
+   */
+  async handleTwilioStatusCallback(
+    twilioCallSid: string,
+    status: string,
+    duration?: number,
+  ): Promise<void> {
+    const call = await this.findByTwilioCallSid(twilioCallSid);
+    if (!call) {
+      this.logger.warn(`Call not found for Twilio SID: ${twilioCallSid}`);
+      return;
+    }
+
+    const timestamp = new Date();
+
+    // Map Twilio status to our event types and update call
+    if (status === 'in-progress') {
+      call.startedAt = timestamp;
+      await this.callRepository.save(call);
+
+      // Create call_started event
+      const event = this.eventRepository.create({
+        call,
+        type: 'call_started',
+        timestamp,
+        payload: { twilioCallSid, status },
+      });
+      await this.eventRepository.save(event);
+      this.logger.log(`Twilio call started: ${call.uuid}`);
+    } else if (['completed', 'busy', 'failed', 'no-answer', 'canceled'].includes(status)) {
+      call.endedAt = timestamp;
+      call.endReason = status;
+
+      // Calculate cost from duration if available
+      if (call.startedAt) {
+        call.cost = this.costsService.calculateCostFromDuration(
+          new Date(call.startedAt),
+          timestamp,
+        );
+      }
+
+      await this.callRepository.save(call);
+
+      // Create call_ended event
+      const event = this.eventRepository.create({
+        call,
+        type: 'call_ended',
+        timestamp,
+        payload: { twilioCallSid, status, duration },
+      });
+      await this.eventRepository.save(event);
+      this.logger.log(`Twilio call ended: ${call.uuid} with status: ${status}`);
+
+      // Async: Fetch actual cost from Deepgram (non-blocking)
+      this.updateCostFromDeepgram(call).catch((err) =>
+        this.logger.error(`Failed to update Deepgram cost: ${err}`),
+      );
+    }
+  }
+
+  /**
+   * Update Twilio cost for a call
+   */
+  async updateTwilioCost(twilioCallSid: string, cost: number): Promise<void> {
+    const call = await this.findByTwilioCallSid(twilioCallSid);
+    if (!call) {
+      this.logger.warn(`Call not found for Twilio cost update: ${twilioCallSid}`);
+      return;
+    }
+
+    call.twilioCost = cost;
+
+    // Recalculate total cost (Deepgram cost + Twilio cost)
+    const deepgramCost = call.deepgramCost ? Number(call.deepgramCost) : 0;
+    call.cost = deepgramCost + cost;
+
+    await this.callRepository.save(call);
+    this.logger.log(`Updated Twilio cost for call ${call.uuid}: $${cost}`);
   }
 }

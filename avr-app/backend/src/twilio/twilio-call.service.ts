@@ -101,6 +101,7 @@ export class TwilioCallService {
         to,
         source: 'twilio',
         twilioCallSid: callSid,
+        twilioNumberId: twilioNumber.id,
       },
     }, agent.id);
 
@@ -125,31 +126,50 @@ export class TwilioCallService {
   ): Promise<void> {
     this.logger.log(`Call status update: ${callSid} -> ${callStatus}`);
 
+    // Use the webhooks service to handle the status callback
+    // It will look up the call by twilioCallSid and update accordingly
+    const duration = callDuration ? parseInt(callDuration, 10) : undefined;
+    await this.webhooksService.handleTwilioStatusCallback(callSid, callStatus, duration);
+
+    // When call ends, fetch the actual cost from Twilio asynchronously
+    if (['completed', 'busy', 'failed', 'no-answer', 'canceled'].includes(callStatus)) {
+      this.fetchAndSaveTwilioCost(numberId, callSid).catch((err) =>
+        this.logger.error(`Failed to fetch Twilio cost: ${err.message}`),
+      );
+    }
+  }
+
+  /**
+   * Fetch call details from Twilio and save the cost
+   */
+  private async fetchAndSaveTwilioCost(numberId: string, callSid: string): Promise<void> {
     const twilioNumber = await this.findNumberById(numberId);
     if (!twilioNumber) {
-      this.logger.warn(`Twilio number not found for status callback: ${numberId}`);
+      this.logger.warn(`Twilio number not found for cost fetch: ${numberId}`);
       return;
     }
 
-    // Map Twilio statuses to our event types
-    const statusMap: Record<string, string> = {
-      'initiated': 'call_initiated',
-      'ringing': 'call_ringing',
-      'in-progress': 'call_started',
-      'completed': 'call_ended',
-      'busy': 'call_ended',
-      'failed': 'call_ended',
-      'no-answer': 'call_ended',
-      'canceled': 'call_ended',
-    };
+    try {
+      const authToken = this.encryptionService.decrypt(twilioNumber.authTokenEncrypted);
+      const twilio = await import('twilio');
+      const client = twilio.default(twilioNumber.accountSid, authToken);
 
-    const eventType = statusMap[callStatus] || 'call_status_update';
-    const endReasons = ['completed', 'busy', 'failed', 'no-answer', 'canceled'];
+      // Fetch call details from Twilio
+      const callDetails = await client.calls(callSid).fetch();
 
-    if (endReasons.includes(callStatus)) {
-      // Call ended - we would need to look up the call by callSid
-      // For now, just log it
-      this.logger.log(`Call ${callSid} ended with status: ${callStatus}, duration: ${callDuration}s`);
+      if (callDetails.price != null) {
+        // Twilio returns price as a negative number (charge)
+        const cost = Math.abs(parseFloat(callDetails.price));
+
+        // Update the call record with Twilio cost
+        await this.webhooksService.updateTwilioCost(callSid, cost);
+
+        this.logger.log(`Twilio cost saved for call ${callSid}: $${cost} ${callDetails.priceUnit}`);
+      } else {
+        this.logger.debug(`No price available yet for call ${callSid}`);
+      }
+    } catch (error) {
+      this.logger.error(`Error fetching Twilio call details: ${error}`);
     }
   }
 
@@ -223,6 +243,7 @@ export class TwilioCallService {
         to: toNumber,
         source: 'twilio',
         twilioCallSid: call.sid,
+        twilioNumberId: twilioNumber.id,
       },
     }, twilioNumber.agent.id);
 

@@ -764,6 +764,7 @@ export const enDictionary = {
       endReason: 'End Reason',
       cost: 'Cost',
       transcript: 'Transcript',
+      twilioCallSid: 'Twilio SID',
     },
     buttons: {
       view: 'View details',
@@ -817,6 +818,11 @@ export const enDictionary = {
       failed: 'Failed',
       no_answer: 'No Answer',
       in_progress: 'In Progress',
+    },
+    costBreakdown: {
+      total: 'Total',
+      deepgram: 'Deepgram',
+      twilio: 'Twilio',
     },
     errors: {
       loadCalls: 'Unable to load calls',
