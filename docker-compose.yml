@@ -43,13 +43,13 @@ services:
     labels:
       - "traefik.enable=true"
       # HTTP routing with TLS termination at Traefik for WebSocket
-      # Traefik uses Let's Encrypt cert, forwards to Asterisk HTTP server port 8088
-      # PJSIP WebSocket transport uses Asterisk's built-in HTTP WebSocket at /ws
+      # Traefik uses Let's Encrypt cert, forwards to PJSIP transport-ws on port 8090
+      # Endpoint 2000 uses transport-ws which binds to port 8090
       - "traefik.http.routers.asterisk-ws.rule=Host(`${DOMAIN:-ai.digitalstorming.com}`)"
       - "traefik.http.routers.asterisk-ws.entrypoints=websocket"
       - "traefik.http.routers.asterisk-ws.tls=true"
       - "traefik.http.routers.asterisk-ws.tls.certresolver=letsencrypt"
-      - "traefik.http.services.asterisk-ws.loadbalancer.server.port=8088"
+      - "traefik.http.services.asterisk-ws.loadbalancer.server.port=8090"
     volumes:
       - ./avr-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
       - ./avr-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
