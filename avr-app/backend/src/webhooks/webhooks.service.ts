@@ -529,10 +529,14 @@ export class WebhooksService {
       });
     }
 
-    const sortField =
-      filters.sortField === 'endedAt' ? 'call.endedAt' : 'call.startedAt';
     const sortDirection = filters.sortDirection === 'asc' ? 'ASC' : 'DESC';
-    qb.orderBy(sortField, sortDirection).addOrderBy('call.id', 'DESC');
+    if (filters.sortField === 'endedAt') {
+      qb.orderBy('call.endedAt', sortDirection).addOrderBy('call.id', 'DESC');
+    } else {
+      // Use COALESCE to handle NULL startedAt (e.g., Twilio calls before status callback)
+      // Falls back to createdAt so new calls appear at the top
+      qb.orderBy('COALESCE(call.startedAt, call.createdAt)', sortDirection).addOrderBy('call.id', 'DESC');
+    }
 
     const { skip, take, page, limit } = getPagination(paginationQuery);
     qb.skip(skip).take(take);

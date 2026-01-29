@@ -1,5 +1,6 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -64,6 +65,9 @@ export class Call {
 
   @Column({ type: 'datetime', nullable: true })
   endedAt?: Date | null;
+
+  @CreateDateColumn()
+  createdAt: Date;
 
   @OneToMany(() => CallEvent, (event) => event.call, { cascade: true })
   events: CallEvent[];
