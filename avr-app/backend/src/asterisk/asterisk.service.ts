@@ -311,12 +311,11 @@ export class AsteriskService {
         }
         const denoiseEnabled = number.denoiseEnabled ?? true;
         const recordingEnabled = number.recordingEnabled ?? false;
+        // Optimized dialplan: do setup while ringing, answer only when ready
         const lines = [
           `[${tenant}]`,
           `exten => ${number.value},1,NoOp(Exten ${number.value} -> Agent ${agent.name ?? agent.id})`,
-          ' same => n,Answer()',
-          ' same => n,Ringing()',
-          ' same => n,Wait(1)',
+          // Setup phase - caller hears ringing from their carrier
           ' same => n,Set(AVR_NUMBER=${CALLERID(num)})',
           " same => n,Set(UUID=${SHELL(uuidgen | tr -d '\\n')})",
           // Capture VICIdial SIP headers if present
@@ -327,12 +326,11 @@ export class AsteriskService {
           ' same => n,Set(VICIDIAL_LIST_ID=${PJSIP_HEADER(read,X-VICIdial-List-Id)})',
           // Build JSON body with VICIdial data included
           " same => n,Set(JSON_BODY={\"uuid\":\"${UUID}\",\"payload\":{\"from\":\"${CALLERID(num)}\",\"to\":\"${EXTEN}\",\"uniqueid\":\"${UNIQUEID}\",\"channel\":\"${CHANNEL}\",\"recording\":" + recordingEnabled + ",\"vicidial\":{\"leadId\":\"${VICIDIAL_LEAD_ID}\",\"campaignId\":\"${VICIDIAL_CAMPAIGN_ID}\",\"phone\":\"${VICIDIAL_PHONE}\",\"userId\":\"${VICIDIAL_USER}\",\"listId\":\"${VICIDIAL_LIST_ID}\"}}})",
-          " same => n,Set(CURLOPT(httpheader)=Content-Type: application/json)",
+          ' same => n,Set(CURLOPT(httpheader)=Content-Type: application/json)',
+          ' same => n,Set(CURLOPT(conntimeout)=5)',
           " same => n,Set(JSON_RESPONSE=${CURL(http://dsai-core-" + agent.id + ":" + agent.httpPort + "/call,${JSON_BODY})})",
-          " same => n,NoOp(JSON_BODY: ${JSON_BODY})",
-          " same => n,NoOp(JSON_RESPONSE: ${JSON_RESPONSE})",
-          " same => n,GotoIf($[\"${JSON_RESPONSE}\" = \"\"]?skip_http)",
-          " same => n(skip_http),NoOp(HTTP call completed or skipped)",
+          // Answer only after setup is complete - minimizes perceived latency
+          ' same => n,Answer()',
         ];
         if (recordingEnabled) {
           lines.push(' same => n,MixMonitor(/var/spool/asterisk/monitor/' + tenant+ '/${UUID}.wav)');
@@ -584,17 +582,19 @@ export class AsteriskService {
     const agent = trunk.agent;
     const didNumber = trunk.didNumber || '_X.';
 
+    // Optimized dialplan: do setup while ringing, answer only when ready
     const lines = [
       `[${tenant}]`,
       `exten => ${didNumber},1,NoOp(Inbound trunk ${trunk.name} -> Agent ${agent.name})`,
-      ' same => n,Answer()',
-      ' same => n,Ringing()',
-      ' same => n,Wait(1)',
+      // Setup phase - caller hears ringing from their carrier
       ' same => n,Set(AVR_NUMBER=${CALLERID(num)})',
       " same => n,Set(UUID=${SHELL(uuidgen | tr -d '\\n')})",
       ` same => n,Set(JSON_BODY={"uuid":"\${UUID}","payload":{"from":"\${CALLERID(num)}","to":"${trunk.didNumber}","direction":"inbound","trunkId":"${trunk.id}","trunkName":"${trunk.name}"}})`,
       ' same => n,Set(CURLOPT(httpheader)=Content-Type: application/json)',
+      ' same => n,Set(CURLOPT(conntimeout)=5)',
       ` same => n,Set(JSON_RESPONSE=\${CURL(http://dsai-core-${agent.id}:${agent.httpPort}/call,\${JSON_BODY})})`,
+      // Answer only after setup is complete - minimizes perceived latency
+      ' same => n,Answer()',
     ];
 
     if (trunk.recordingEnabled) {
