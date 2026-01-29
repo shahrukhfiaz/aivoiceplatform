@@ -1992,9 +1992,32 @@ function CreateUserAgent() {
     // For production with HTTP server proxy, ServerPath should be set to /ws
     var wsPath = (ServerPath && ServerPath !== "null" && ServerPath !== "undefined" && ServerPath !== "") ? ServerPath : "";
     console.log("WebSocket Server:", wssServer, "Protocol:", wsProtocol, "Path:", wsPath, "IsLocalhost:", isLocalhost);
+    console.log("SIP Config - Username:", SipUsername, "Domain:", SipDomain, "Password:", SipPassword ? "[SET]" : "[NOT SET]");
+
+    // Validate required SIP configuration
+    if (!SipUsername || SipUsername === "null" || SipUsername === "undefined") {
+        console.error("Cannot create UserAgent: SipUsername is not set. Value:", SipUsername);
+        Alert("Configuration Error: SIP username not configured. Please check your settings.", "Error");
+        return;
+    }
+    if (!SipDomain || SipDomain === "null" || SipDomain === "undefined") {
+        console.error("Cannot create UserAgent: SipDomain is not set. Value:", SipDomain);
+        Alert("Configuration Error: SIP domain not configured. Please check your settings.", "Error");
+        return;
+    }
+
+    // Create URI and validate it
+    var sipUri = SIP.UserAgent.makeURI("sip:"+ SipUsername + "@" + SipDomain);
+    if (!sipUri) {
+        console.error("Failed to create SIP URI from:", "sip:"+ SipUsername + "@" + SipDomain);
+        Alert("Configuration Error: Invalid SIP URI. Please check username and domain.", "Error");
+        return;
+    }
+    console.log("Created SIP URI:", sipUri.toString());
+
     var options = {
         logConfiguration: false,            // If true, constructor logs the registerer configuration.
-        uri: SIP.UserAgent.makeURI("sip:"+ SipUsername + "@" + SipDomain),
+        uri: sipUri,
         transportOptions: {
             server: wsProtocol +"://"+ wssServer +":"+ WebSocketPort +""+ wsPath,
             traceSip: false,
