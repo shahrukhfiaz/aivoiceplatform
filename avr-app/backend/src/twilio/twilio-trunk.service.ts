@@ -192,24 +192,25 @@ export class TwilioTrunkService {
       this.logger.log(`Created Twilio SIP trunk: ${twilioTrunk.sid}`);
 
       // 3. Create Origination URL (points incoming calls to our Asterisk)
-      const publicIp = process.env.PUBLIC_IP || process.env.PUBLIC_URL?.replace(/https?:\/\//, '').split(':')[0];
-      if (!publicIp) {
+      // Prefer domain (PUBLIC_HOST) over IP for better maintainability
+      const sipHost = process.env.PUBLIC_HOST || process.env.PUBLIC_IP || process.env.PUBLIC_URL?.replace(/https?:\/\//, '').split(':')[0];
+      if (!sipHost) {
         // Clean up the trunk we just created
         await client.trunking.v1.trunks(twilioTrunk.sid).remove();
-        throw new BadRequestException('PUBLIC_IP environment variable not set');
+        throw new BadRequestException('PUBLIC_HOST or PUBLIC_IP environment variable not set');
       }
 
       const originationUrl = await client.trunking.v1
         .trunks(twilioTrunk.sid)
         .originationUrls.create({
           friendlyName: 'Asterisk Server',
-          sipUrl: `sip:${publicIp}:5060`,
+          sipUrl: `sip:${sipHost}:5060`,
           weight: 10,
           priority: 10,
           enabled: true,
         });
 
-      this.logger.log(`Created origination URL: ${originationUrl.sid} -> sip:${publicIp}:5060`);
+      this.logger.log(`Created origination URL: ${originationUrl.sid} -> sip:${sipHost}:5060`);
 
       // 4. Associate the phone number with the trunk
       await client.trunking.v1
