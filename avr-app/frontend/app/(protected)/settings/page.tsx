@@ -51,8 +51,8 @@ export default function SettingsPage() {
   const form = useForm<BrandingFormValues>({
     resolver: zodResolver(brandingSchema),
     defaultValues: {
-      appName: 'DSAI Admin',
-      panelName: 'DSAI Admin Panel',
+      appName: 'Digital Storming',
+      panelName: 'Digital Storming',
       logoUrl: '',
       faviconUrl: '',
       primaryColor: '',
@@ -62,17 +62,17 @@ export default function SettingsPage() {
       discordUrl: 'https://discord.gg/DFTU69Hg74',
       githubUrl: 'https://github.com/orgs/agentvoiceresponse/repositories',
       wikiUrl: 'https://wiki.agentvoiceresponse.com/',
-      loginTitle: '',
+      loginTitle: 'Digital Storming',
       loginDescription: '',
-      webrtcPhoneTitle: 'DSAI Phone',
+      webrtcPhoneTitle: 'Phone',
     },
   });
 
   useEffect(() => {
     if (branding) {
       form.reset({
-        appName: branding.appName || 'DSAI Admin',
-        panelName: branding.panelName || 'DSAI Admin Panel',
+        appName: branding.appName || 'Digital Storming',
+        panelName: branding.panelName || 'Digital Storming',
         logoUrl: branding.logoUrl || '',
         faviconUrl: branding.faviconUrl || '',
         primaryColor: branding.primaryColor || '',
@@ -82,9 +82,9 @@ export default function SettingsPage() {
         discordUrl: branding.discordUrl || 'https://discord.gg/DFTU69Hg74',
         githubUrl: branding.githubUrl || 'https://github.com/orgs/agentvoiceresponse/repositories',
         wikiUrl: branding.wikiUrl || 'https://wiki.agentvoiceresponse.com/',
-        loginTitle: branding.loginTitle || '',
+        loginTitle: branding.loginTitle || 'Digital Storming',
         loginDescription: branding.loginDescription || '',
-        webrtcPhoneTitle: branding.webrtcPhoneTitle || 'DSAI Phone',
+        webrtcPhoneTitle: branding.webrtcPhoneTitle || 'Phone',
       });
     }
   }, [branding, form]);
@@ -194,7 +194,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel>App Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="DSAI Admin" {...field} />
+                      <Input placeholder="Digital Storming" {...field} />
                     </FormControl>
                     <FormDescription>
                       The name displayed in the browser tab and page titles.
@@ -211,7 +211,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel>Panel Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="DSAI Admin Panel" {...field} />
+                      <Input placeholder="Digital Storming" {...field} />
                     </FormControl>
                     <FormDescription>
                       The name displayed in the sidebar header.
@@ -268,7 +268,7 @@ export default function SettingsPage() {
                   <FormItem>
                     <FormLabel>WebRTC Phone Title</FormLabel>
                     <FormControl>
-                      <Input placeholder="DSAI Phone" {...field} />
+                      <Input placeholder="Phone" {...field} />
                     </FormControl>
                     <FormDescription>
                       The title displayed on the WebRTC phone panel.

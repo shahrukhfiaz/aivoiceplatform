@@ -58,8 +58,8 @@ export class BrandingService {
    */
   private async createDefault(): Promise<Branding> {
     const branding = this.brandingRepository.create({
-      appName: 'DSAI Admin',
-      panelName: 'DSAI Admin Panel',
+      appName: 'Digital Storming',
+      panelName: 'Digital Storming',
       logoUrl: null,
       faviconUrl: null,
       primaryColor: null,
@@ -69,9 +69,9 @@ export class BrandingService {
       discordUrl: 'https://discord.gg/DFTU69Hg74',
       githubUrl: 'https://github.com/orgs/agentvoiceresponse/repositories',
       wikiUrl: 'https://wiki.agentvoiceresponse.com/',
-      loginTitle: null,
+      loginTitle: 'Digital Storming',
       loginDescription: null,
-      webrtcPhoneTitle: 'DSAI Phone',
+      webrtcPhoneTitle: 'Phone',
     });
 
     const saved = await this.brandingRepository.save(branding);
