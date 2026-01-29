@@ -25,6 +25,10 @@ export class UpdateTrunkDto {
   direction?: 'inbound' | 'outbound';
 
   @IsOptional()
+  @IsIn(['generic', 'twilio', 'telnyx', 'vonage'])
+  providerType?: 'generic' | 'twilio' | 'telnyx' | 'vonage';
+
+  @IsOptional()
   @IsString()
   host?: string;
 

@@ -17,11 +17,16 @@ import { UserRole } from '../users/user.entity';
 import { CreateTwilioNumberDto } from './dto/create-twilio-number.dto';
 import { UpdateTwilioNumberDto } from './dto/update-twilio-number.dto';
 import { TwilioNumberResponse, TwilioService } from './twilio.service';
+import { TwilioTrunkService, CreateTwilioTrunkDto } from './twilio-trunk.service';
+import { Trunk } from '../trunks/trunk.entity';
 
 @Controller('twilio-numbers')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TwilioController {
-  constructor(private readonly twilioService: TwilioService) {}
+  constructor(
+    private readonly twilioService: TwilioService,
+    private readonly twilioTrunkService: TwilioTrunkService,
+  ) {}
 
   @Post()
   @Roles(UserRole.ADMIN, UserRole.MANAGER)
@@ -40,6 +45,25 @@ export class TwilioController {
     @Body() body: { accountSid: string; authToken: string },
   ): Promise<{ success: boolean; numbers?: Array<{ phoneNumber: string; friendlyName: string; capabilities: { voice: boolean; sms: boolean } }>; error?: string }> {
     return this.twilioService.fetchAvailableNumbers(body.accountSid, body.authToken);
+  }
+
+  /**
+   * Create a new Twilio SIP trunk for Elastic SIP Trunking
+   * This is the recommended way to set up Twilio for low latency calls
+   */
+  @Post('sip-trunks')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  createSipTrunk(@Body() dto: CreateTwilioTrunkDto): Promise<Trunk> {
+    return this.twilioTrunkService.createTwilioTrunk(dto);
+  }
+
+  /**
+   * Get all Twilio SIP trunks
+   */
+  @Get('sip-trunks')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.VIEWER)
+  findAllSipTrunks(): Promise<Trunk[]> {
+    return this.twilioTrunkService.findAllTwilioTrunks();
   }
 
   @Get()
@@ -86,5 +110,15 @@ export class TwilioController {
     @Param('id') id: string,
   ): Promise<{ success: boolean; error?: string }> {
     return this.twilioService.configureWebhooksById(id);
+  }
+
+  /**
+   * Migrate a TwilioNumber to SIP Trunk (Elastic SIP Trunking)
+   * This converts from Twilio Media Streams to direct SIP for lower latency
+   */
+  @Post(':id/migrate-to-sip')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  migrateToSip(@Param('id') id: string): Promise<Trunk> {
+    return this.twilioTrunkService.migrateToSipTrunk(id);
   }
 }

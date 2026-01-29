@@ -9,6 +9,7 @@ import { Agent } from '../agents/agent.entity';
 
 export type TrunkDirection = 'inbound' | 'outbound';
 export type TrunkTransport = 'udp' | 'tcp' | 'tls' | 'wss';
+export type TrunkProviderType = 'generic' | 'twilio' | 'telnyx' | 'vonage';
 
 @Entity()
 export class Trunk {
@@ -20,6 +21,10 @@ export class Trunk {
 
   @Column({ type: 'text', default: 'inbound' })
   direction: TrunkDirection;
+
+  // Provider type for specialized configuration
+  @Column({ type: 'text', default: 'generic' })
+  providerType: TrunkProviderType;
 
   // SIP Provider Host (e.g., sip.telnyx.com, sip.twilio.com)
   @Column({ nullable: true })

@@ -63,6 +63,7 @@ export class TrunksService {
     const trunk = this.trunksRepository.create({
       name,
       direction,
+      providerType: dto.providerType ?? 'generic',
       host: dto.host,
       port: dto.port ?? 5060,
       username: dto.username,
@@ -141,6 +142,10 @@ export class TrunksService {
 
     if (dto.direction !== undefined) {
       trunk.direction = dto.direction;
+    }
+
+    if (dto.providerType !== undefined) {
+      trunk.providerType = dto.providerType;
     }
 
     // Validate direction-specific requirements

@@ -5,6 +5,7 @@ import Ari, { Client } from 'ari-client';
 import { Phone } from '../phones/phone.entity';
 import { PhoneNumber } from '../numbers/number.entity';
 import { Trunk, TrunkDirection } from '../trunks/trunk.entity';
+import { TWILIO_SIGNALING_IPS } from '../trunks/twilio-ip-ranges';
 
 @Injectable()
 export class AsteriskService {
@@ -387,6 +388,10 @@ export class AsteriskService {
 
   private buildTrunkBlock(trunk: Trunk): string {
     if (trunk.direction === 'inbound') {
+      // Use Twilio-specific configuration for Twilio provider
+      if (trunk.providerType === 'twilio') {
+        return this.buildTwilioInboundTrunkBlock(trunk);
+      }
       return this.buildInboundTrunkBlock(trunk);
     } else {
       return this.buildOutboundTrunkBlock(trunk);
@@ -434,6 +439,68 @@ export class AsteriskService {
       ];
       sections.push(identifyLines.join('\n'));
     }
+
+    return sections.join('\n\n');
+  }
+
+  /**
+   * Build PJSIP configuration specifically optimized for Twilio Elastic SIP Trunking
+   * Key differences from generic inbound:
+   * - No authentication (Twilio uses IP-based ACL)
+   * - RTP symmetric for NAT traversal
+   * - No qualify (Twilio doesn't respond to OPTIONS)
+   * - Rewrite contact for NAT compatibility
+   */
+  private buildTwilioInboundTrunkBlock(trunk: Trunk): string {
+    const codecs = this.normalizeCodecs(trunk.codecs);
+
+    // Use provided IPs or default to Twilio IP ranges
+    const allowedIps = trunk.allowedIps
+      ? trunk.allowedIps.split(',').map(ip => ip.trim()).filter(Boolean)
+      : TWILIO_SIGNALING_IPS;
+
+    const sections: string[] = [];
+
+    // Endpoint section - optimized for Twilio
+    const endpointLines = [
+      `[${trunk.id}]`,
+      'type=endpoint',
+      `transport=transport-${trunk.transport || 'udp'}`,
+      `context=${process.env.TENANT || 'demo'}`,
+      'disallow=all',
+      `allow=${codecs}`,
+      `aors=${trunk.id}`,
+      'direct_media=no',
+      // NAT traversal options (critical for Twilio)
+      'rewrite_contact=yes',
+      'rtp_symmetric=yes',
+      'force_rport=yes',
+      // Caller ID handling
+      'trust_id_inbound=yes',
+      'send_pai=yes',
+      'send_rpid=yes',
+      // DTMF handling
+      'dtmf_mode=rfc4733',
+    ];
+
+    sections.push(endpointLines.join('\n'));
+
+    // AOR section - no qualify for Twilio (they don't respond to OPTIONS)
+    sections.push([
+      `[${trunk.id}]`,
+      'type=aor',
+      'max_contacts=10',
+      'qualify_frequency=0',
+    ].join('\n'));
+
+    // Identify section for IP-based matching (all Twilio IPs)
+    const identifyLines = [
+      `[${trunk.id}]`,
+      'type=identify',
+      `endpoint=${trunk.id}`,
+      ...allowedIps.map(ip => `match=${ip}`),
+    ];
+    sections.push(identifyLines.join('\n'));
 
     return sections.join('\n\n');
   }
