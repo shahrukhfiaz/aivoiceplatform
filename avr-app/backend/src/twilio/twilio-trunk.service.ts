@@ -204,13 +204,13 @@ export class TwilioTrunkService {
         .trunks(twilioTrunk.sid)
         .originationUrls.create({
           friendlyName: 'Asterisk Server',
-          sipUrl: `sip:${sipHost}`,
+          sipUrl: `sip:${sipHost}:5060`,
           weight: 10,
           priority: 10,
           enabled: true,
         });
 
-      this.logger.log(`Created origination URL: ${originationUrl.sid} -> sip:${sipHost}`);
+      this.logger.log(`Created origination URL: ${originationUrl.sid} -> sip:${sipHost}:5060`);
 
       // 4. Associate the phone number with the trunk
       await client.trunking.v1
