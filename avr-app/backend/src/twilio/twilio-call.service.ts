@@ -240,7 +240,7 @@ export class TwilioCallService {
     const agent = twilioNumber.agent!;
 
     // Get the STS URL from the running container
-    const providerUrls = await this.agentsService.getProviderUrls(agent);
+    const providerUrls = await this.agentsService.getProviderUrlsForAgent(agent.id);
     const stsUrl = providerUrls.stsUrl;
 
     // Extract port from STS URL (e.g., ws://dsai-sts-xxx:6429 -> 6429)
