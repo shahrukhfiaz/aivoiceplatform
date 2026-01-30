@@ -9,10 +9,6 @@ import { Play, Square, PlusCircle, Waves, Pencil, Trash2, Shield, Loader2, Copy,
 import { apiFetch, type PaginatedResponse } from '@/lib/api';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { useI18n, type Dictionary } from '@/lib/i18n';
-
-// Force dynamic rendering - no caching
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 import { useAuth } from '@/lib/auth';
 import {
   Dialog,

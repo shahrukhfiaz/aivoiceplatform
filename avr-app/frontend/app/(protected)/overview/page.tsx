@@ -17,10 +17,6 @@ import {
 } from 'lucide-react';
 import { apiFetch, type PaginatedResponse } from '@/lib/api';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
-
-// Force dynamic rendering - no caching
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';

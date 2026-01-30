@@ -9,10 +9,6 @@ import { PlusCircle, Pencil, Trash2, Shield, Eye, EyeOff, Phone, MessageSquare, 
 import { apiFetch, ApiError, type PaginatedResponse } from '@/lib/api';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { useI18n, type Dictionary } from '@/lib/i18n';
-
-// Force dynamic rendering - no caching
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
