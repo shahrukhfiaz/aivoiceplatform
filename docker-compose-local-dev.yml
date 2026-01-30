@@ -1,8 +1,8 @@
 services:
-  avr-asterisk:
+  dsai-asterisk:
     image: agentvoiceresponse/avr-asterisk
     platform: linux/x86_64
-    container_name: avr-asterisk
+    container_name: dsai-asterisk
     restart: unless-stopped
     ports:
       - "5038:5038"    # AMI
@@ -19,47 +19,46 @@ services:
       - ./avr-infra/asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
       - ./avr-infra/asterisk/recordings:/var/spool/asterisk/monitor
     networks:
-      - avr
+      - dsai
     environment:
       - ARI_USERNAME=asterisk
       - ARI_PASSWORD=asterisk
 
-  avr-ami:
+  dsai-ami:
     image: agentvoiceresponse/avr-ami
     platform: linux/x86_64
-    container_name: avr-ami
+    container_name: dsai-ami
     restart: unless-stopped
     environment:
       - PORT=6006
-      - AMI_HOST=avr-asterisk
+      - AMI_HOST=dsai-asterisk
       - AMI_PORT=5038
       - AMI_USERNAME=avr
       - AMI_PASSWORD=avr
     ports:
       - "6006:6006"
     networks:
-      - avr
+      - dsai
     depends_on:
-      - avr-asterisk
+      - dsai-asterisk
 
-  avr-phone:
+  dsai-phone:
     build:
       context: ./avr-phone
       dockerfile: Dockerfile
     platform: linux/x86_64
-    container_name: avr-phone
+    container_name: dsai-phone
     restart: unless-stopped
     ports:
       - "9080:80"
     networks:
-      - avr
+      - dsai
     environment:
       - NEXT_PUBLIC_SIP_SERVER=localhost:8089
       - NEXT_PUBLIC_SIP_USERNAME=1000
       - NEXT_PUBLIC_SIP_PASSWORD=1000
 
 networks:
-  avr:
-    name: avr
+  dsai:
+    name: dsai
     external: true
-

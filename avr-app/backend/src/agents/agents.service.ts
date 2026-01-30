@@ -260,8 +260,8 @@ export class AgentsService {
     // Build webhook URL - use container name for Docker internal networking
     let webhookUrl = process.env.WEBHOOK_URL;
     if (!webhookUrl || webhookUrl.includes('host.docker.internal')) {
-      // Default to container name (avr-backend) for reliable Docker internal networking
-      webhookUrl = 'http://avr-backend:3001/webhooks';
+      // Default to container name (dsai-backend) for reliable Docker internal networking
+      webhookUrl = 'http://dsai-backend:3001/webhooks';
     }
 
     const coreEnv = this.buildEnv(agent, [
@@ -314,8 +314,8 @@ export class AgentsService {
       coreEnv.push(`PORT=${agent.port}`);
       coreEnv.push(`HTTP_PORT=${agent.httpPort}`);
       // Add BACKEND_URL so core container can fetch provider URLs dynamically from database
-      // Use container name (avr-backend) for reliable Docker internal networking
-      const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL || 'http://avr-backend:3001';
+      // Use container name (dsai-backend) for reliable Docker internal networking
+      const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL || 'http://dsai-backend:3001';
       coreEnv.push(`BACKEND_URL=${backendUrl}`);
       coreEnv.push(`AGENT_ID=${agent.id}`);
       containerIds['core'] = await this.dockerService.runContainer(
@@ -544,8 +544,8 @@ export class AgentsService {
     // The context to connect to when the call is answered
     const context = `avr-outbound-${agent.id}`;
 
-    // Use avr-ami's /originate endpoint to initiate the call via Asterisk AMI
-    const amiUrl = process.env.AMI_SERVICE_URL || 'http://avr-ami:6006';
+    // Use dsai-ami's /originate endpoint to initiate the call via Asterisk AMI
+    const amiUrl = process.env.AMI_SERVICE_URL || 'http://dsai-ami:6006';
 
     const response = await fetch(`${amiUrl}/originate`, {
       method: 'POST',
@@ -599,7 +599,7 @@ export class AgentsService {
   }
 
   private buildContainerName(agentId: string, type?: string) {
-    return type ? `avr-${type}-${agentId}` : `avr-core-${agentId}`;
+    return type ? `dsai-${type}-${agentId}` : `dsai-core-${agentId}`;
   }
 
   private getContainerNames(agentId: string, mode: AgentMode): string[] {
@@ -684,15 +684,15 @@ export class AgentsService {
     // PROVIDER_ID and BACKEND_URL enable containers to fetch config from API
     env.add(`PROVIDER_ID=${provider.id}`);
     // Determine backend URL for container-to-backend communication
-    // Use container name (avr-backend) for reliable Docker internal networking
+    // Use container name (dsai-backend) for reliable Docker internal networking
     let backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL;
     if (!backendUrl) {
       // Default: use container name for Docker internal networking
-      backendUrl = 'http://avr-backend:3001';
+      backendUrl = 'http://dsai-backend:3001';
     }
     // Replace host.docker.internal with container name (host.docker.internal doesn't work on Linux)
     if (backendUrl.includes('host.docker.internal')) {
-      backendUrl = backendUrl.replace('host.docker.internal', 'avr-backend');
+      backendUrl = backendUrl.replace('host.docker.internal', 'dsai-backend');
     }
     env.add(`BACKEND_URL=${backendUrl}`);
 

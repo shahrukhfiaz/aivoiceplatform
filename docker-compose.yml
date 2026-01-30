@@ -30,12 +30,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
     networks:
-      - avr
+      - dsai
 
-  avr-asterisk:
+  dsai-asterisk:
     image: agentvoiceresponse/avr-asterisk
     platform: linux/amd64
-    container_name: avr-asterisk
+    container_name: dsai-asterisk
     restart: always
     ports:
       # AMI port - internal only, not exposed to host for security
@@ -63,69 +63,69 @@ services:
       - ./avr-infra/asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
       - ./avr-infra/asterisk/recordings:/var/spool/asterisk/monitor
     networks:
-      - avr
+      - dsai
 
-  avr-ami:
+  dsai-ami:
     image: agentvoiceresponse/avr-ami
     platform: linux/amd64
-    container_name: avr-ami
+    container_name: dsai-ami
     restart: always
     environment:
       - PORT=6006
-      - AMI_HOST=avr-asterisk
+      - AMI_HOST=dsai-asterisk
       - AMI_PORT=5038
       - AMI_USERNAME=avr
       - AMI_PASSWORD=avr
     networks:
-      - avr
+      - dsai
 
-  avr-core:
+  dsai-core:
     image: agentvoiceresponse/avr-core
     platform: linux/amd64
-    container_name: avr-core
+    container_name: dsai-core
     restart: always
     environment:
       - PORT=5001
-      - WEBHOOK_URL=http://avr-backend:3001/webhooks
+      - WEBHOOK_URL=http://dsai-backend:3001/webhooks
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-webhook-secret-change-this}
     # Port 5001 only accessible within Docker network (not exposed to host)
     networks:
-      - avr
+      - dsai
 
-  avr-llm-openai:
+  dsai-llm-openai:
     image: agentvoiceresponse/avr-llm-openai
     platform: linux/amd64
-    container_name: avr-llm-openai
+    container_name: dsai-llm-openai
     restart: always
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     networks:
-      - avr
+      - dsai
 
-  avr-llm-anthropic:
+  dsai-llm-anthropic:
     image: agentvoiceresponse/avr-llm-anthropic
     platform: linux/amd64
-    container_name: avr-llm-anthropic
+    container_name: dsai-llm-anthropic
     restart: always
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     networks:
-      - avr
+      - dsai
 
-  avr-tts-deepgram:
+  dsai-tts-deepgram:
     image: agentvoiceresponse/avr-tts-deepgram
     platform: linux/amd64
-    container_name: avr-tts-deepgram
+    container_name: dsai-tts-deepgram
     restart: always
     environment:
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
     networks:
-      - avr
+      - dsai
 
-  avr-phone:
+  dsai-phone:
     image: agentvoiceresponse/avr-phone
     platform: linux/amd64
-    container_name: avr-phone
+    container_name: dsai-phone
     restart: always
     volumes:
       - ./avr-phone/src/phone.js:/usr/share/nginx/html/phone.js:ro
@@ -155,11 +155,11 @@ services:
       - "traefik.http.routers.phone-assets.priority=100"
       - "traefik.http.services.phone.loadbalancer.server.port=80"
     networks:
-      - avr
+      - dsai
 
   backend:
     build: ./avr-app/backend
-    container_name: avr-backend
+    container_name: dsai-backend
     restart: always
     environment:
       - PORT=3001
@@ -169,21 +169,22 @@ services:
       - PUBLIC_HOST=${PUBLIC_HOST:-ai.digitalstorming.com}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
-      - WEBHOOK_URL=http://avr-backend:3001/webhooks
+      - WEBHOOK_URL=http://dsai-backend:3001/webhooks
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-webhook-secret-change-this}
-      - ARI_URL=http://avr-asterisk:8088/ari
+      - ARI_URL=http://dsai-asterisk:8088/ari
       - ARI_USERNAME=avr
       - ARI_PASSWORD=avr
-      - AMI_HOST=avr-asterisk
+      - AMI_HOST=dsai-asterisk
       - AMI_PORT=5038
       - AMI_USERNAME=avr
       - AMI_PASSWORD=avr
+      - AMI_SERVICE_URL=http://dsai-ami:6006
       - CORE_DEFAULT_IMAGE=agentvoiceresponse/avr-core
       - DB_TYPE=sqlite
       - DB_DATABASE=/app/data/data.db
       - ASTERISK_CONFIG_PATH=/app/asterisk
       - ASTERISK_MONITOR_PATH=/app/recordings
-      - NETWORK=avr
+      - NETWORK=dsai
       - PUBLIC_IP=${PUBLIC_IP:-}
     labels:
       - "traefik.enable=true"
@@ -213,10 +214,9 @@ services:
       - ./avr-infra/asterisk/recordings:/app/recordings
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - avr-asterisk
-      - avr-ami
+      - dsai-asterisk
+      - dsai-ami
     networks:
-      - avr
       - dsai
 
   frontend:
@@ -224,7 +224,7 @@ services:
       context: ./avr-app/frontend
       args:
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://ai.digitalstorming.com/api}
-    container_name: avr-frontend
+    container_name: dsai-frontend
     restart: always
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://ai.digitalstorming.com/api}
@@ -247,15 +247,12 @@ services:
     depends_on:
       - backend
     networks:
-      - avr
+      - dsai
 
 networks:
-  avr:
-    name: avr
+  dsai:
+    name: dsai
     driver: bridge
     ipam:
       config:
         - subnet: 172.20.0.0/24
-  dsai:
-    name: dsai
-    external: true
