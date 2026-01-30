@@ -67,12 +67,13 @@ export function useCallUpdates(options: UseCallUpdatesOptions = {}) {
       const token = getStoredToken();
 
       // Build SSE URL with auth token as query param (since EventSource doesn't support headers)
-      const sseUrl = new URL('/webhooks/stream', baseUrl);
+      // Ensure we append to the API path, not replace it
+      let sseUrlString = baseUrl.endsWith('/') ? `${baseUrl}webhooks/stream` : `${baseUrl}/webhooks/stream`;
       if (token) {
-        sseUrl.searchParams.set('token', token);
+        sseUrlString += `?token=${encodeURIComponent(token)}`;
       }
 
-      const eventSource = new EventSource(sseUrl.toString());
+      const eventSource = new EventSource(sseUrlString);
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {
