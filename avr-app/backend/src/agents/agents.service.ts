@@ -447,15 +447,24 @@ export class AgentsService {
       });
     }
 
-    // 3. Validate agent has outbound trunk
-    if (!agent.outboundTrunk) {
-      throw new BadRequestException({
-        code: 'NO_OUTBOUND_TRUNK',
-        message: 'Agent does not have an outbound trunk configured',
-      });
+    // 3. Resolve trunk - use provided trunkId or fall back to agent's default
+    let trunk = agent.outboundTrunk;
+    if (dto.trunkId) {
+      trunk = await this.resolveTrunk(dto.trunkId);
+      if (!trunk) {
+        throw new BadRequestException({
+          code: 'TRUNK_NOT_FOUND',
+          message: 'Specified trunk not found or is not an outbound trunk',
+        });
+      }
     }
 
-    const trunk = agent.outboundTrunk;
+    if (!trunk) {
+      throw new BadRequestException({
+        code: 'NO_OUTBOUND_TRUNK',
+        message: 'No outbound trunk specified and agent does not have a default trunk configured',
+      });
+    }
     const fromNumber = dto.fromNumber || trunk.outboundCallerId || '';
     const uuid = uuidv4();
 

@@ -228,7 +228,7 @@ export default function AgentsPage() {
   const [vicidialLoading, setVicidialLoading] = useState(false);
   const [dialDialogOpen, setDialDialogOpen] = useState(false);
   const [dialingAgent, setDialingAgent] = useState<AgentDto | null>(null);
-  const [dialForm, setDialForm] = useState({ toNumber: '', fromNumber: '' });
+  const [dialForm, setDialForm] = useState({ toNumber: '', fromNumber: '', trunkId: '' });
   const [dialLoading, setDialLoading] = useState(false);
   const { dictionary } = useI18n();
   const { user } = useAuth();
@@ -575,12 +575,16 @@ export default function AgentsPage() {
 
   const openDialDialog = (agent: AgentDto) => {
     setDialingAgent(agent);
-    setDialForm({ toNumber: '', fromNumber: '' });
+    setDialForm({
+      toNumber: '',
+      fromNumber: '',
+      trunkId: agent.outboundTrunk?.id || ''
+    });
     setDialDialogOpen(true);
   };
 
   const handleDial = async () => {
-    if (!dialingAgent || !dialForm.toNumber) return;
+    if (!dialingAgent || !dialForm.toNumber || !dialForm.trunkId) return;
     setDialLoading(true);
     setError(null);
     try {
@@ -589,11 +593,12 @@ export default function AgentsPage() {
         body: JSON.stringify({
           toNumber: dialForm.toNumber,
           fromNumber: dialForm.fromNumber || undefined,
+          trunkId: dialForm.trunkId,
         }),
       });
       setDialDialogOpen(false);
       setDialingAgent(null);
-      setDialForm({ toNumber: '', fromNumber: '' });
+      setDialForm({ toNumber: '', fromNumber: '', trunkId: '' });
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -858,14 +863,14 @@ export default function AgentsPage() {
                           >
                             <Phone className="mr-2 h-3 w-3" /> {dictionary.agents.sipCredentials.button}
                           </Button>
-                          {agent.status === 'running' && agent.outboundTrunk && (
+                          {agent.status === 'running' && (
                             <Button
                               size="sm"
                               variant="default"
                               onClick={() => openDialDialog(agent)}
                               disabled={isReadOnly || dialLoading}
                             >
-                              <Phone className="mr-2 h-3 w-3" /> {dictionary.agents.dial?.button || 'Dial'}
+                              <Phone className="mr-2 h-3 w-3" /> {dictionary.agents.dial?.button || 'Test Call'}
                             </Button>
                           )}
                           <Button
@@ -1136,19 +1141,42 @@ export default function AgentsPage() {
         setDialDialogOpen(open);
         if (!open) {
           setDialingAgent(null);
-          setDialForm({ toNumber: '', fromNumber: '' });
+          setDialForm({ toNumber: '', fromNumber: '', trunkId: '' });
         }
       }}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle>{dictionary.agents.dial?.title || 'Make Outbound Call'}</DialogTitle>
+            <DialogTitle>{dictionary.agents.dial?.title || 'Make Test Call'}</DialogTitle>
             <DialogDescription>
-              {(dictionary.agents.dial?.description || 'Initiate an outbound call using agent {agent}').replace('{agent}', dialingAgent?.name || '')}
+              {(dictionary.agents.dial?.description || 'Initiate a test outbound call using agent {agent}').replace('{agent}', dialingAgent?.name || '')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>{dictionary.agents.dial?.toNumber || 'Phone Number to Call'}</Label>
+              <Label>Outbound Trunk *</Label>
+              <Select
+                value={dialForm.trunkId}
+                onValueChange={(value) => setDialForm({ ...dialForm, trunkId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a trunk" />
+                </SelectTrigger>
+                <SelectContent>
+                  {outboundTrunks.map((trunk) => (
+                    <SelectItem key={trunk.id} value={trunk.id}>
+                      {trunk.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {outboundTrunks.length === 0 && (
+                <p className="text-sm text-destructive mt-1">
+                  No outbound trunks configured. Please create one first.
+                </p>
+              )}
+            </div>
+            <div>
+              <Label>{dictionary.agents.dial?.toNumber || 'Phone Number to Call'} *</Label>
               <Input
                 placeholder="+14155551234"
                 value={dialForm.toNumber}
@@ -1158,7 +1186,7 @@ export default function AgentsPage() {
             <div>
               <Label>{dictionary.agents.dial?.fromNumber || 'Caller ID (From Number)'} ({dictionary.common.optional})</Label>
               <Input
-                placeholder={dialingAgent?.outboundTrunk?.name || '+14155559999'}
+                placeholder="+14155559999"
                 value={dialForm.fromNumber}
                 onChange={(e) => setDialForm({ ...dialForm, fromNumber: e.target.value })}
               />
@@ -1171,7 +1199,7 @@ export default function AgentsPage() {
             <Button variant="outline" onClick={() => setDialDialogOpen(false)}>
               {dictionary.common.buttons.cancel}
             </Button>
-            <Button onClick={handleDial} disabled={!dialForm.toNumber || dialLoading}>
+            <Button onClick={handleDial} disabled={!dialForm.toNumber || !dialForm.trunkId || dialLoading}>
               {dialLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (

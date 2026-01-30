@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsObject,
   IsNumber,
+  IsUUID,
   Min,
   Max,
   Matches,
@@ -21,6 +22,10 @@ export class DialCallDto {
     message: 'fromNumber must be a valid phone number (E.164 format recommended)',
   })
   fromNumber?: string;
+
+  @IsOptional()
+  @IsUUID()
+  trunkId?: string;
 
   @IsOptional()
   @IsObject()
