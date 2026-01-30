@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpDown, Copy, Download, Eye, MessageSquare, Play, RefreshCcw } from 'lucide-react';
 import { apiFetch, ApiError, getApiUrl, getStoredToken, type PaginatedResponse } from '@/lib/api';
-import { useAutoRefresh } from '@/hooks/use-auto-refresh';
+import { useCallUpdates, type CallUpdatePayload } from '@/hooks/use-call-updates';
 import { useI18n } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -148,6 +148,61 @@ export default function CallsPage() {
   });
   const filtersRef = useRef(filters);
 
+  // Convert SSE payload to EnhancedCallDto format
+  const payloadToCallDto = useCallback((payload: CallUpdatePayload): EnhancedCallDto => ({
+    id: payload.id,
+    uuid: payload.uuid,
+    agentId: payload.agentId,
+    agentName: payload.agentName,
+    callType: payload.callType as 'inbound' | 'outbound' | null,
+    fromNumber: payload.fromNumber,
+    toNumber: payload.toNumber,
+    providerId: payload.providerId,
+    providerName: payload.providerName,
+    endReason: payload.endReason,
+    cost: payload.cost,
+    startedAt: payload.startedAt,
+    endedAt: payload.endedAt,
+    createdAt: payload.createdAt,
+    hasRecording: payload.hasRecording,
+  }), []);
+
+  // Real-time call updates via SSE
+  useCallUpdates({
+    onCallCreated: useCallback((payload: CallUpdatePayload) => {
+      const newCall = payloadToCallDto(payload);
+      // Add new call to the top of the list if on first page
+      setCalls(prev => {
+        // Check if call already exists
+        if (prev.some(c => c.id === newCall.id)) {
+          return prev;
+        }
+        // Add to top, maintain page size limit
+        return [newCall, ...prev].slice(0, pagination.limit);
+      });
+      // Update total count
+      setPagination(prev => ({ ...prev, total: prev.total + 1 }));
+    }, [payloadToCallDto, pagination.limit]),
+
+    onCallUpdated: useCallback((payload: CallUpdatePayload) => {
+      const updatedCall = payloadToCallDto(payload);
+      setCalls(prev => prev.map(call =>
+        call.id === updatedCall.id ? { ...call, ...updatedCall } : call
+      ));
+    }, [payloadToCallDto]),
+
+    onCallEnded: useCallback((payload: CallUpdatePayload) => {
+      const endedCall = payloadToCallDto(payload);
+      setCalls(prev => prev.map(call =>
+        call.id === endedCall.id ? { ...call, ...endedCall } : call
+      ));
+    }, [payloadToCallDto]),
+
+    onError: useCallback((err: Error) => {
+      console.error('Call updates stream error:', err);
+    }, []),
+  });
+
   // Load agents and providers for filter dropdowns
   useEffect(() => {
     const loadFilterOptions = async () => {
@@ -247,14 +302,6 @@ export default function CallsPage() {
   useEffect(() => {
     loadCalls();
   }, [loadCalls]);
-
-  // Auto-refresh calls every 15 seconds, on focus, and on visibility change
-  useAutoRefresh({
-    refreshFn: loadCalls,
-    intervalMs: 15000,
-    refreshOnFocus: true,
-    refreshOnVisibility: true,
-  });
 
   useEffect(() => {
     if (calls.length === 0) {

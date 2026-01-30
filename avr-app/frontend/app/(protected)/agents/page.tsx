@@ -7,7 +7,6 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Play, Square, PlusCircle, Waves, Pencil, Trash2, Shield, Loader2, Copy, Phone } from 'lucide-react';
 import { apiFetch, type PaginatedResponse } from '@/lib/api';
-import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
 import {
@@ -343,14 +342,6 @@ export default function AgentsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  // Auto-refresh agents every 30 seconds, on focus, and on visibility change
-  useAutoRefresh({
-    refreshFn: loadData,
-    intervalMs: 30000,
-    refreshOnFocus: true,
-    refreshOnVisibility: true,
-  });
 
   const toRequestBody = (values: AgentFormValues) => ({
     name: values.name,

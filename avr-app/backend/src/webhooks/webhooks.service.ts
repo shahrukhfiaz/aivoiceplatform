@@ -6,6 +6,7 @@ import { CallEvent, WebhookEventType } from './call-event.entity';
 import { WebhookEventDto } from './dto/webhook-event.dto';
 import { Agent } from '../agents/agent.entity';
 import { CostsService } from '../costs/costs.service';
+import { CallUpdatesGateway } from './call-updates.gateway';
 import {
   buildPaginatedResult,
   getPagination,
@@ -57,6 +58,7 @@ export class WebhooksService {
     @InjectRepository(Agent)
     private readonly agentRepository: Repository<Agent>,
     private readonly costsService: CostsService,
+    private readonly callUpdatesGateway: CallUpdatesGateway,
   ) {}
 
   verifySecret(provided: string | undefined) {
@@ -92,6 +94,8 @@ export class WebhooksService {
         events: [],
       });
       call = await this.callRepository.save(call);
+      // Broadcast new call created
+      this.callUpdatesGateway.notifyCallCreated(this.toCallUpdatePayload(call));
     } else if (agentId && !call.agentId) {
       call.agentId = agentId;
       needsSave = true;
@@ -150,11 +154,15 @@ export class WebhooksService {
       }
 
       await this.callRepository.save(call);
+      // Broadcast call updated with phone numbers
+      this.callUpdatesGateway.notifyCallUpdated(this.toCallUpdatePayload(call));
     }
 
     if (event.type === 'call_started') {
       call.startedAt = timestamp;
       await this.callRepository.save(call);
+      // Broadcast call started
+      this.callUpdatesGateway.notifyCallUpdated(this.toCallUpdatePayload(call));
     }
 
     if (event.type === 'call_ended') {
@@ -181,6 +189,8 @@ export class WebhooksService {
       }
 
       await this.callRepository.save(call);
+      // Broadcast call ended
+      this.callUpdatesGateway.notifyCallEnded(this.toCallUpdatePayload(call));
 
       // Async: Fetch actual cost from Deepgram (non-blocking)
       this.updateCostFromDeepgram(call).catch((err) =>
@@ -282,6 +292,29 @@ export class WebhooksService {
       date.setHours(0, 0, 0, 0);
     }
     return date;
+  }
+
+  /**
+   * Convert a Call entity to the format expected by the WebSocket gateway
+   */
+  private toCallUpdatePayload(call: Call, agentName?: string) {
+    return {
+      id: call.id,
+      uuid: call.uuid,
+      agentId: call.agentId,
+      agentName: agentName || null,
+      callType: call.callType,
+      fromNumber: call.fromNumber,
+      toNumber: call.toNumber,
+      providerId: call.providerId,
+      providerName: call.providerName,
+      endReason: call.endReason,
+      cost: call.cost,
+      startedAt: call.startedAt?.toISOString() || null,
+      endedAt: call.endedAt?.toISOString() || null,
+      createdAt: call.createdAt?.toISOString() || null,
+      hasRecording: false, // Will be determined later
+    };
   }
 
   async getCallWithEvents(callId: string): Promise<Call | null> {
@@ -833,6 +866,8 @@ export class WebhooksService {
       });
       await this.eventRepository.save(event);
       this.logger.log(`Twilio call ended: ${call.uuid} with status: ${status}`);
+      // Broadcast call ended
+      this.callUpdatesGateway.notifyCallEnded(this.toCallUpdatePayload(call));
 
       // Async: Fetch actual cost from Deepgram (non-blocking)
       this.updateCostFromDeepgram(call).catch((err) =>

@@ -8,13 +8,16 @@ import {
   Param,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { WebhookEventDto } from './dto/webhook-event.dto';
 import {
   WebhooksService,
   EnhancedSummary,
   TranscriptMessage,
 } from './webhooks.service';
+import { CallUpdatesGateway } from './call-updates.gateway';
 import { PaginatedResult, PaginationQuery } from '../common/pagination';
 import { CallType } from './call.entity';
 import { RecordingsService } from '../recordings/recordings.service';
@@ -26,6 +29,7 @@ export class WebhooksController {
   constructor(
     private readonly webhooksService: WebhooksService,
     private readonly recordingsService: RecordingsService,
+    private readonly callUpdatesGateway: CallUpdatesGateway,
   ) {}
 
   @Post()
@@ -38,6 +42,43 @@ export class WebhooksController {
     await this.forwardWebhook(event, agentId);
     await this.webhooksService.handleEvent(event, agentId);
     return { status: 'ok' };
+  }
+
+  /**
+   * Server-Sent Events endpoint for real-time call updates
+   * Clients connect to this endpoint to receive live updates when calls are created/updated/ended
+   */
+  @Get('stream')
+  streamCallUpdates(@Res() res: Response) {
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+    res.flushHeaders();
+
+    // Register this client
+    const clientId = this.callUpdatesGateway.addClient(res);
+    this.logger.log(`SSE client ${clientId} connected to call updates stream`);
+
+    // Send initial connection confirmation
+    res.write(`data: ${JSON.stringify({ type: 'connected', clientId })}\n\n`);
+
+    // Keep connection alive with periodic heartbeat
+    const heartbeat = setInterval(() => {
+      try {
+        res.write(`: heartbeat\n\n`);
+      } catch {
+        clearInterval(heartbeat);
+      }
+    }, 30000);
+
+    // Clean up on disconnect
+    res.on('close', () => {
+      clearInterval(heartbeat);
+      this.callUpdatesGateway.removeClient(clientId);
+      this.logger.log(`SSE client ${clientId} disconnected`);
+    });
   }
 
   @Get('calls')

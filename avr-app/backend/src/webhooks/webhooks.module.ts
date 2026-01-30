@@ -6,6 +6,7 @@ import { Call } from './call.entity';
 import { CallEvent } from './call-event.entity';
 import { WebhooksController } from './webhooks.controller';
 import { WebhooksService } from './webhooks.service';
+import { CallUpdatesGateway } from './call-updates.gateway';
 import { RecordingsModule } from '../recordings/recordings.module';
 import { CostsModule } from '../costs/costs.module';
 
@@ -16,7 +17,7 @@ import { CostsModule } from '../costs/costs.module';
     CostsModule,
   ],
   controllers: [WebhooksController],
-  providers: [WebhooksService, RolesGuard],
-  exports: [WebhooksService],
+  providers: [WebhooksService, CallUpdatesGateway, RolesGuard],
+  exports: [WebhooksService, CallUpdatesGateway],
 })
 export class WebhooksModule {}

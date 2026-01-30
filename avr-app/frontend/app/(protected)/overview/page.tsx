@@ -16,7 +16,6 @@ import {
   AreaChart as AreaChartIcon
 } from 'lucide-react';
 import { apiFetch, type PaginatedResponse } from '@/lib/api';
-import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
@@ -28,8 +27,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
@@ -67,8 +64,6 @@ const granularityOptions = ['day', 'week', 'month', 'year'] as const;
 
 type Granularity = (typeof granularityOptions)[number];
 
-const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
-
 // Colors for donut chart - distinct black and gray
 const DONUT_COLORS = {
   inbound: '#1f2937',  // dark gray (near black)
@@ -96,7 +91,6 @@ export default function DashboardPage() {
   const [range, setRange] = useState<TimeRange>('1');
   const [granularity, setGranularity] = useState<Granularity>('month');
   const [agentFilter, setAgentFilter] = useState<string>('all');
-  const [autoRefresh, setAutoRefresh] = useState(true);
 
   const loadAgents = useCallback(async () => {
     try {
@@ -173,21 +167,6 @@ export default function DashboardPage() {
   useEffect(() => {
     void fetchCallData();
   }, [fetchCallData]);
-
-  // Combined refresh function for both agents and call data
-  const refreshAll = useCallback(() => {
-    void fetchCallData();
-    void loadAgents();
-  }, [fetchCallData, loadAgents]);
-
-  // Auto-refresh using hook - handles interval, focus, and visibility
-  useAutoRefresh({
-    refreshFn: refreshAll,
-    intervalMs: AUTO_REFRESH_INTERVAL,
-    refreshOnFocus: true,
-    refreshOnVisibility: true,
-    enabled: autoRefresh,
-  });
 
   // Calculate trend percentage
   const calculateTrend = (current: number, previous: number | undefined): { value: number; isPositive: boolean } | null => {
@@ -362,16 +341,6 @@ export default function DashboardPage() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="auto-refresh"
-              checked={autoRefresh}
-              onCheckedChange={setAutoRefresh}
-            />
-            <Label htmlFor="auto-refresh" className="text-sm text-muted-foreground cursor-pointer">
-              {dictionary.dashboard.filters.autoRefresh ?? 'Auto-refresh'}
-            </Label>
           </div>
           <Button variant="outline" onClick={fetchCallData} disabled={loading}>
             <RefreshCcw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} /> {dictionary.dashboard.filters.refresh}
