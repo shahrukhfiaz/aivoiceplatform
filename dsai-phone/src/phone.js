@@ -291,7 +291,8 @@ function utcDateNow(){
     return moment().utc().format("YYYY-MM-DD HH:mm:ss UTC");
 }
 function getDbItem(itemIndex, defaultValue){
-    if(localDB.getItem(itemIndex) != null) return localDB.getItem(itemIndex);
+    var value = localDB.getItem(itemIndex);
+    if(value != null && value !== "" && value !== "null" && value !== "undefined") return value;
     return defaultValue;
 }
 function getAudioSrcID(){
