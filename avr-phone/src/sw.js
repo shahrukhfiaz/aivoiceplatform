@@ -1,8 +1,7 @@
-const cacheID = "v1";
+const cacheID = "v2";
+// Cache list - only include files that actually exist and are needed for offline
+// Note: index.html is always loaded from network, wallpapers are optional
 const CacheItems = [
-    "index.html",   // Special page: Loads from network
-    "offline.html",   // Special page: Save to cache, but return only when offline
-
     "/favicon.ico",
 
     "avatars/default.0.webp",
@@ -15,8 +14,9 @@ const CacheItems = [
     "avatars/default.7.webp",
     "avatars/default.8.webp",
 
-    "wallpaper.dark.webp",
-    "wallpaper.light.webp",
+    // Wallpapers removed - they load fine from network and cause cache issues
+    // "wallpaper.dark.webp",
+    // "wallpaper.light.webp",
 
     "media/Alert.mp3",
     "media/Ringtone_1.mp3",
@@ -151,12 +151,12 @@ const loadHomePage = async function(request) {
         }
     }
     catch (error) {
-        const responseFromCache = await caches.match("offline.html");
-        if (responseFromCache) {
-            return responseFromCache;
-        } else {
-            return new Response("Network Error", { status: 408, statusText : "Network Error", headers: { "Content-Type": "text/plain" },});
-        }
+        // Return error response if network fails (no offline page available)
+        return new Response("Network Error - Please check your connection", {
+            status: 408,
+            statusText: "Network Error",
+            headers: { "Content-Type": "text/plain" }
+        });
     }
 }
 const addToCache = async function(request, response) {
