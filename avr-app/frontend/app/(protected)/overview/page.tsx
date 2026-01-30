@@ -16,6 +16,7 @@ import {
   AreaChart as AreaChartIcon
 } from 'lucide-react';
 import { apiFetch, type PaginatedResponse } from '@/lib/api';
+import { useCallUpdates, type CallUpdatePayload } from '@/hooks/use-call-updates';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
@@ -110,6 +111,43 @@ export default function DashboardPage() {
   useEffect(() => {
     void loadAgents();
   }, [loadAgents]);
+
+  // Real-time stats updates via SSE
+  useCallUpdates({
+    onCallCreated: useCallback((payload: CallUpdatePayload) => {
+      // Increment total calls and active calls
+      setEnhancedSummary(prev => ({
+        ...prev,
+        totalCalls: prev.totalCalls + 1,
+        activeCalls: prev.activeCalls + 1,
+        inboundCalls: payload.callType === 'inbound' ? prev.inboundCalls + 1 : prev.inboundCalls,
+        outboundCalls: payload.callType === 'outbound' ? prev.outboundCalls + 1 : prev.outboundCalls,
+      }));
+    }, []),
+
+    onCallUpdated: useCallback((payload: CallUpdatePayload) => {
+      // Update call type counts if call type was set/changed
+      if (payload.startedAt && !payload.endedAt) {
+        // Call started - it's now active
+        setEnhancedSummary(prev => ({
+          ...prev,
+          activeCalls: Math.max(0, prev.activeCalls),
+        }));
+      }
+    }, []),
+
+    onCallEnded: useCallback((payload: CallUpdatePayload) => {
+      // Decrement active calls when a call ends
+      setEnhancedSummary(prev => ({
+        ...prev,
+        activeCalls: Math.max(0, prev.activeCalls - 1),
+      }));
+    }, []),
+
+    onError: useCallback((err: Error) => {
+      console.error('Dashboard SSE error:', err);
+    }, []),
+  });
 
   // Calculate previous period range based on current range
   const getPreviousRange = useCallback((currentRange: TimeRange): string => {
