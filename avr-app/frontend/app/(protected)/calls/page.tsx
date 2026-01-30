@@ -165,6 +165,7 @@ export default function CallsPage() {
     endedAt: payload.endedAt ?? null,
     createdAt: payload.createdAt ?? null,
     hasRecording: payload.hasRecording,
+    twilioCallSid: payload.twilioCallSid ?? null,
   }), []);
 
   // Real-time call updates via SSE
@@ -833,8 +834,8 @@ export default function CallsPage() {
                       <TableCell className="text-sm">
                         {call.cost != null ? (
                           <Tooltip>
-                            <TooltipTrigger className="cursor-help underline decoration-dotted underline-offset-4">
-                              ${Number(call.cost).toFixed(2)}
+                            <TooltipTrigger asChild>
+                              <span>${Number(call.cost).toFixed(2)}</span>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
                               <div className="space-y-1 text-xs">
@@ -842,14 +843,18 @@ export default function CallsPage() {
                                   <span>{dictionary.calls.costBreakdown?.total ?? 'Total'}:</span>
                                   <span className="font-mono">${Number(call.cost).toFixed(4)}</span>
                                 </div>
-                                <div className="flex justify-between gap-4 text-muted-foreground">
-                                  <span>{dictionary.calls.costBreakdown?.deepgram ?? 'Deepgram'}:</span>
-                                  <span className="font-mono">${call.deepgramCost != null ? Number(call.deepgramCost).toFixed(4) : '0.0000'}</span>
-                                </div>
-                                <div className="flex justify-between gap-4 text-muted-foreground">
-                                  <span>{dictionary.calls.costBreakdown?.twilio ?? 'Twilio'}:</span>
-                                  <span className="font-mono">${call.twilioCost != null ? Number(call.twilioCost).toFixed(4) : '0.0000'}</span>
-                                </div>
+                                {call.deepgramCost != null && call.deepgramCost > 0 && (
+                                  <div className="flex justify-between gap-4 text-muted-foreground">
+                                    <span>{dictionary.calls.costBreakdown?.deepgram ?? 'Deepgram'}:</span>
+                                    <span className="font-mono">${Number(call.deepgramCost).toFixed(4)}</span>
+                                  </div>
+                                )}
+                                {call.twilioCost != null && call.twilioCost > 0 && (
+                                  <div className="flex justify-between gap-4 text-muted-foreground">
+                                    <span>{dictionary.calls.costBreakdown?.twilio ?? 'Twilio'}:</span>
+                                    <span className="font-mono">${Number(call.twilioCost).toFixed(4)}</span>
+                                  </div>
+                                )}
                               </div>
                             </TooltipContent>
                           </Tooltip>
