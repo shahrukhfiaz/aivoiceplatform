@@ -1,7 +1,7 @@
 #!/bin/bash
-# Create .env file for AVR production
+# Create .env file for DSAI production
 
-cd /opt/avr/avr-infra
+cd /opt/dsai/dsai-infra
 
 cat > .env << 'EOF'
 # Deepgram Configuration
@@ -9,8 +9,8 @@ DEEPGRAM_API_KEY=ad748182032466add820eed184e6b81aefa06fcd
 AGENT_PROMPT=You are a helpful assistant. Be friendly and professional.
 
 # AMI Configuration
-AMI_USERNAME=avr
-AMI_PASSWORD=avr
+AMI_USERNAME=dsai
+AMI_PASSWORD=dsai
 
 # JWT Secret
 JWT_SECRET=$(openssl rand -hex 32)

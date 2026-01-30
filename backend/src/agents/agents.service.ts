@@ -32,7 +32,7 @@ import {
 @Injectable()
 export class AgentsService {
   private readonly defaultImage =
-    process.env.CORE_DEFAULT_IMAGE || 'agentvoiceresponse/avr-core:latest';
+    process.env.CORE_DEFAULT_IMAGE || 'agentvoiceresponse/dsai-core:latest';
   private readonly logger = new Logger(AgentsService.name);
 
   constructor(
@@ -423,7 +423,7 @@ export class AgentsService {
       metadata?: Record<string, unknown>;
     },
   ): Promise<void> {
-    const coreContainerName = `avr-core-${agent.id}`;
+    const coreContainerName = `dsai-core-${agent.id}`;
     const url = `http://${coreContainerName}:${agent.httpPort}/dial`;
 
     const response = await fetch(url, {
@@ -465,7 +465,7 @@ export class AgentsService {
   }
 
   private buildContainerName(agentId: string, type?: string) {
-    return type ? `avr-${type}-${agentId}` : `avr-core-${agentId}`;
+    return type ? `dsai-${type}-${agentId}` : `dsai-core-${agentId}`;
   }
 
   private getContainerNames(agentId: string, mode: AgentMode): string[] {

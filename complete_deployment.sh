@@ -1,9 +1,9 @@
 #!/bin/bash
-# Complete AVR Deployment - Run on server
+# Complete DSAI Deployment - Run on server
 set -e
 
 echo "========================================"
-echo "Completing AVR Deployment"
+echo "Completing DSAI Deployment"
 echo "========================================"
 
 # Wait for apt to finish (with timeout)
@@ -48,7 +48,7 @@ fi
 
 # Fix .env file with proper secrets
 echo "Creating .env file..."
-cd /opt/avr/avr-infra
+cd /opt/dsai/dsai-infra
 JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || cat /dev/urandom | tr -dc 'a-f0-9' | fold -w 64 | head -n 1)
 WEBHOOK_SECRET=$(openssl rand -hex 32 2>/dev/null || cat /dev/urandom | tr -dc 'a-f0-9' | fold -w 64 | head -n 1)
 
@@ -58,8 +58,8 @@ DEEPGRAM_API_KEY=ad748182032466add820eed184e6b81aefa06fcd
 AGENT_PROMPT=You are a helpful assistant. Be friendly and professional.
 
 # AMI Configuration
-AMI_USERNAME=avr
-AMI_PASSWORD=avr
+AMI_USERNAME=dsai
+AMI_PASSWORD=dsai
 
 # JWT Secret
 JWT_SECRET=$JWT_SECRET
@@ -108,7 +108,7 @@ echo "Dashboard: https://agent.callbust.com"
 echo "Login: admin / admin"
 echo ""
 echo "To view logs:"
-echo "  cd /opt/avr/avr-infra"
+echo "  cd /opt/dsai/dsai-infra"
 echo "  docker-compose -f docker-compose-production.yml logs -f"
 echo ""
 

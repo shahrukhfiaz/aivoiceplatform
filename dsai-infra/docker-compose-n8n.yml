@@ -1,0 +1,109 @@
+services:
+  dsai-core:
+    image: agentvoiceresponse/dsai-core
+    platform: linux/x86_64
+    container_name: dsai-core
+    restart: always
+    environment:
+      - PORT=5001
+      - ASR_URL=http://dsai-asr-deepgram:6010/speech-to-text-stream
+      - LLM_URL=http://dsai-llm-n8n:6016/prompt-stream
+      - TTS_URL=http://dsai-tts-deepgram:6011/text-to-speech-stream
+      - SYSTEM_MESSAGE="Hello, how can I help you today?"
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://host.docker.internal:3001/webhooks}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+    ports:
+      - 5001:5001
+    networks:
+      - dsai
+
+  dsai-n8n:
+    image: n8nio/n8n:latest
+    container_name: dsai-n8n
+    environment:
+      - GENERIC_TIMEZONE=Europe/Amsterdam
+      - NODE_ENV=production
+      - N8N_SECURE_COOKIE=false
+    ports:
+      - 5678:5678
+    volumes:
+      - ./n8n:/home/node/.n8n
+    networks:
+      - dsai
+
+  dsai-llm-n8n:
+    image: agentvoiceresponse/dsai-llm-n8n
+    platform: linux/x86_64
+    container_name: dsai-llm-n8n
+    restart: always
+    environment:
+      - PORT=6016
+      - PUBLIC_CHAT_URL=$PUBLIC_CHAT_URL
+    networks:
+      - dsai
+
+  dsai-asr-deepgram:
+    image: agentvoiceresponse/dsai-asr-deepgram
+    platform: linux/x86_64
+    container_name: dsai-asr-deepgram
+    restart: always
+    environment:
+      - PORT=6010
+      - DEEPGRAM_API_KEY=$DEEPGRAM_API_KEY
+      - SPEECH_RECOGNITION_LANGUAGE=en-US
+      - SPEECH_RECOGNITION_MODEL=nova-2-phonecall
+    networks:
+      - dsai
+
+  dsai-tts-deepgram:
+    image: agentvoiceresponse/dsai-tts-deepgram
+    platform: linux/x86_64
+    container_name: dsai-tts-deepgram
+    restart: always
+    environment:
+      - PORT=6011
+      - DEEPGRAM_API_KEY=$DEEPGRAM_API_KEY
+    networks:
+      - dsai
+
+  dsai-asterisk:
+    image: agentvoiceresponse/dsai-asterisk
+    platform: linux/x86_64
+    container_name: dsai-asterisk
+    restart: always
+    ports:
+      - 5038:5038
+      - 5060:5060
+      - 8088:8088
+      - 8089:8089
+      - 10000-10050:10000-10050/udp
+    volumes:
+      - ./asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
+      - ./asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
+      - ./asterisk/conf/extensions.conf:/etc/asterisk/my_extensions.conf
+      - ./asterisk/conf/queues.conf:/etc/asterisk/my_queues.conf
+      - ./asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
+    networks:
+      - dsai
+
+  dsai-ami:
+    image: agentvoiceresponse/dsai-ami
+    platform: linux/x86_64
+    container_name: dsai-ami
+    restart: always
+    environment:
+      - PORT=6006
+      - AMI_HOST=${AMI_HOST:-dsai-asterisk}
+      - AMI_PORT=${AMI_PORT:-5038}
+      - AMI_USERNAME=${AMI_USERNAME:-dsai}
+      - AMI_PASSWORD=${AMI_PASSWORD:-dsai}
+    networks:
+      - dsai
+
+networks:
+  dsai:
+    name: dsai
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

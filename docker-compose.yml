@@ -33,7 +33,7 @@ services:
       - dsai
 
   dsai-asterisk:
-    image: agentvoiceresponse/avr-asterisk
+    image: agentvoiceresponse/dsai-asterisk
     platform: linux/amd64
     container_name: dsai-asterisk
     restart: always
@@ -56,17 +56,17 @@ services:
       - "traefik.http.routers.asterisk-ws.tls.certresolver=letsencrypt"
       - "traefik.http.services.asterisk-ws.loadbalancer.server.port=8088"
     volumes:
-      - ./avr-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
-      - ./avr-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
-      - ./avr-infra/asterisk/conf/extensions.conf:/etc/asterisk/my_extensions.conf
-      - ./avr-infra/asterisk/conf/queues.conf:/etc/asterisk/my_queues.conf
-      - ./avr-infra/asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
-      - ./avr-infra/asterisk/recordings:/var/spool/asterisk/monitor
+      - ./dsai-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
+      - ./dsai-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
+      - ./dsai-infra/asterisk/conf/extensions.conf:/etc/asterisk/my_extensions.conf
+      - ./dsai-infra/asterisk/conf/queues.conf:/etc/asterisk/my_queues.conf
+      - ./dsai-infra/asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
+      - ./dsai-infra/asterisk/recordings:/var/spool/asterisk/monitor
     networks:
       - dsai
 
   dsai-ami:
-    image: agentvoiceresponse/avr-ami
+    image: agentvoiceresponse/dsai-ami
     platform: linux/amd64
     container_name: dsai-ami
     restart: always
@@ -74,13 +74,13 @@ services:
       - PORT=6006
       - AMI_HOST=dsai-asterisk
       - AMI_PORT=5038
-      - AMI_USERNAME=avr
-      - AMI_PASSWORD=avr
+      - AMI_USERNAME=dsai
+      - AMI_PASSWORD=dsai
     networks:
       - dsai
 
   dsai-core:
-    image: agentvoiceresponse/avr-core
+    image: agentvoiceresponse/dsai-core
     platform: linux/amd64
     container_name: dsai-core
     restart: always
@@ -93,7 +93,7 @@ services:
       - dsai
 
   dsai-llm-openai:
-    image: agentvoiceresponse/avr-llm-openai
+    image: agentvoiceresponse/dsai-llm-openai
     platform: linux/amd64
     container_name: dsai-llm-openai
     restart: always
@@ -103,7 +103,7 @@ services:
       - dsai
 
   dsai-llm-anthropic:
-    image: agentvoiceresponse/avr-llm-anthropic
+    image: agentvoiceresponse/dsai-llm-anthropic
     platform: linux/amd64
     container_name: dsai-llm-anthropic
     restart: always
@@ -113,7 +113,7 @@ services:
       - dsai
 
   dsai-tts-deepgram:
-    image: agentvoiceresponse/avr-tts-deepgram
+    image: agentvoiceresponse/dsai-tts-deepgram
     platform: linux/amd64
     container_name: dsai-tts-deepgram
     restart: always
@@ -123,13 +123,13 @@ services:
       - dsai
 
   dsai-phone:
-    image: agentvoiceresponse/avr-phone
+    image: agentvoiceresponse/dsai-phone
     platform: linux/amd64
     container_name: dsai-phone
     restart: always
     volumes:
-      - ./avr-phone/src/phone.js:/usr/share/nginx/html/phone.js:ro
-      - ./avr-phone/src/sw.js:/usr/share/nginx/html/sw.js:ro
+      - ./dsai-phone/src/phone.js:/usr/share/nginx/html/phone.js:ro
+      - ./dsai-phone/src/sw.js:/usr/share/nginx/html/sw.js:ro
     labels:
       - "traefik.enable=true"
       # Main phone page route
@@ -158,7 +158,7 @@ services:
       - dsai
 
   backend:
-    build: ./avr-app/backend
+    build: ./dsai-app/backend
     container_name: dsai-backend
     restart: always
     environment:
@@ -172,14 +172,14 @@ services:
       - WEBHOOK_URL=http://dsai-backend:3001/webhooks
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-webhook-secret-change-this}
       - ARI_URL=http://dsai-asterisk:8088/ari
-      - ARI_USERNAME=avr
-      - ARI_PASSWORD=avr
+      - ARI_USERNAME=dsai
+      - ARI_PASSWORD=dsai
       - AMI_HOST=dsai-asterisk
       - AMI_PORT=5038
-      - AMI_USERNAME=avr
-      - AMI_PASSWORD=avr
+      - AMI_USERNAME=dsai
+      - AMI_PASSWORD=dsai
       - AMI_SERVICE_URL=http://dsai-ami:6006
-      - CORE_DEFAULT_IMAGE=agentvoiceresponse/avr-core
+      - CORE_DEFAULT_IMAGE=agentvoiceresponse/dsai-core
       - DB_TYPE=sqlite
       - DB_DATABASE=/app/data/data.db
       - ASTERISK_CONFIG_PATH=/app/asterisk
@@ -209,9 +209,9 @@ services:
       - "traefik.http.routers.backend-twilio.tls.certresolver=letsencrypt"
       - "traefik.http.routers.backend-twilio.service=backend"
     volumes:
-      - ./avr-infra/asterisk/conf:/app/asterisk
+      - ./dsai-infra/asterisk/conf:/app/asterisk
       - ./data:/app/data
-      - ./avr-infra/asterisk/recordings:/app/recordings
+      - ./dsai-infra/asterisk/recordings:/app/recordings
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - dsai-asterisk
@@ -221,7 +221,7 @@ services:
 
   frontend:
     build:
-      context: ./avr-app/frontend
+      context: ./dsai-app/frontend
       args:
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://ai.digitalstorming.com/api}
     container_name: dsai-frontend
@@ -251,8 +251,4 @@ services:
 
 networks:
   dsai:
-    name: dsai
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/24
+    external: true

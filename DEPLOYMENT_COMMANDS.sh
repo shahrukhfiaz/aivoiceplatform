@@ -1,21 +1,21 @@
 #!/bin/bash
 # Production Deployment Script - Run this before deploying
 
-echo "=== AVR Production Deployment ==="
+echo "=== DSAI Production Deployment ==="
 echo ""
 
 # 1. Rebuild Backend
 echo "1. Building backend..."
-cd "avr-app/backend"
+cd "dsai-app/backend"
 npm run build
-docker build -t agentvoiceresponse/avr-app-backend:latest .
+docker build -t agentvoiceresponse/dsai-app-backend:latest .
 echo "✅ Backend built"
 echo ""
 
 # 2. Rebuild STS Container  
 echo "2. Building STS container..."
-cd "../../avr-sts-deepgram"
-docker build -t agentvoiceresponse/avr-sts-deepgram:latest .
+cd "../../dsai-sts-deepgram"
+docker build -t agentvoiceresponse/dsai-sts-deepgram:latest .
 echo "✅ STS container built"
 echo ""
 
@@ -23,8 +23,8 @@ echo ""
 echo "3. Push to Docker Hub? (y/n)"
 read -r push_choice
 if [ "$push_choice" = "y" ]; then
-    docker push agentvoiceresponse/avr-app-backend:latest
-    docker push agentvoiceresponse/avr-sts-deepgram:latest
+    docker push agentvoiceresponse/dsai-app-backend:latest
+    docker push agentvoiceresponse/dsai-sts-deepgram:latest
     echo "✅ Images pushed to Docker Hub"
 fi
 

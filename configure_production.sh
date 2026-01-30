@@ -1,17 +1,17 @@
 #!/bin/bash
-# Production Configuration Script for AVR
+# Production Configuration Script for DSAI
 # Domain: agent.callbust.com
 # Server IP: 192.241.179.25
 
 set -e
 
 echo "========================================"
-echo "AVR Production Configuration"
+echo "DSAI Production Configuration"
 echo "Domain: agent.callbust.com"
 echo "========================================"
 echo ""
 
-cd /opt/avr/avr-infra
+cd /opt/dsai/dsai-infra
 
 # Create .env file with Deepgram API key
 echo "Creating .env file..."
@@ -26,8 +26,8 @@ DEEPGRAM_API_KEY=ad748182032466add820eed184e6b81aefa06fcd
 AGENT_PROMPT=You are a helpful assistant. Be friendly and professional.
 
 # AMI Configuration
-AMI_USERNAME=avr
-AMI_PASSWORD=avr
+AMI_USERNAME=dsai
+AMI_PASSWORD=dsai
 
 # JWT Secret (change in production)
 JWT_SECRET=$(openssl rand -hex 32)
@@ -55,8 +55,8 @@ if command -v ufw &> /dev/null; then
     ufw allow 80/tcp comment 'HTTP'
     ufw allow 443/tcp comment 'HTTPS'
     
-    # Allow AVR Core
-    ufw allow 5001/tcp comment 'AVR Core'
+    # Allow DSAI Core
+    ufw allow 5001/tcp comment 'DSAI Core'
     
     # Allow SIP (if needed externally)
     ufw allow 5060/tcp comment 'SIP'

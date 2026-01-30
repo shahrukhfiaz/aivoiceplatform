@@ -1,8 +1,8 @@
 {
-  "name": "avr-app-frontend",
+  "name": "dsai-app-frontend",
   "version": "0.0.0",
-  "author": "Agent Voice Response <info@agentvoiceresponse.com>",
-  "description": "Frontend for Agent Voice Response App",
+  "author": "DSAI <info@agentvoiceresponse.com>",
+  "description": "Frontend for DSAI App",
   "scripts": {
     "start:dev": "next dev",
     "build": "next build",

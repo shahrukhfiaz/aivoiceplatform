@@ -1,0 +1,84 @@
+services:
+  dsai-core:
+    image: agentvoiceresponse/dsai-core
+    platform: linux/x86_64
+    container_name: dsai-core
+    restart: always
+    environment:
+      - PORT=5001
+      - STS_URL=ws://dsai-sts-elevenlabs:6035
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://host.docker.internal:3001/webhooks}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+    ports:
+      - 5001:5001
+    networks:
+      - dsai
+
+  dsai-sts-elevenlabs:
+    image: agentvoiceresponse/dsai-sts-elevenlabs
+    platform: linux/x86_64
+    container_name: dsai-sts-elevenlabs
+    restart: always
+    environment:
+      - PORT=6035
+      - ELEVENLABS_API_KEY=$ELEVENLABS_API_KEY
+      - ELEVENLABS_AGENT_ID=$ELEVENLABS_AGENT_ID
+      - AMI_URL=${AMI_URL:-http://dsai-ami:6006}
+    # volumes: # uncomment if you want to use the custom tools
+    #   - ./tools:/usr/src/app/tools
+    networks:
+      - dsai
+
+  dsai-asterisk:
+    image: agentvoiceresponse/dsai-asterisk
+    platform: linux/x86_64
+    container_name: dsai-asterisk
+    restart: always
+    ports:
+      - 5038:5038
+      - 5060:5060
+      - 8088:8088
+      - 8089:8089
+      - 10000-10050:10000-10050/udp
+    volumes:
+      - ./asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
+      - ./asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
+      - ./asterisk/conf/extensions.conf:/etc/asterisk/my_extensions.conf
+      - ./asterisk/conf/queues.conf:/etc/asterisk/my_queues.conf
+      - ./asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
+    networks:
+      - dsai
+
+  dsai-ami:
+    image: agentvoiceresponse/dsai-ami
+    platform: linux/x86_64
+    container_name: dsai-ami
+    restart: always
+    environment:
+      - PORT=6006
+      - AMI_HOST=${AMI_HOST:-dsai-asterisk}
+      - AMI_PORT=${AMI_PORT:-5038}
+      - AMI_USERNAME=${AMI_USERNAME:-dsai}
+      - AMI_PASSWORD=${AMI_PASSWORD:-dsai}
+    ports:
+      - 6006:6006
+    networks:
+      - dsai
+
+  dsai-phone:
+    image: agentvoiceresponse/dsai-phone
+    platform: linux/x86_64
+    container_name: dsai-phone
+    restart: always
+    ports:
+      - 8080:80
+    networks:
+      - dsai
+
+networks:
+  dsai:
+    name: dsai
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

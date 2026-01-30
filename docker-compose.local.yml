@@ -1,11 +1,11 @@
 services:
-  avr-app-backend:
+  dsai-app-backend:
     ports:
       - "3001:3001"
     environment:
       - FRONTEND_URL=http://localhost:3000
 
-  avr-app-frontend:
+  dsai-app-frontend:
     ports:
       - "3000:3000"
     environment:

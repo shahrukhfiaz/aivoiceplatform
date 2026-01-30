@@ -1,8 +1,8 @@
 {
-  "name": "avr-app-backend",
+  "name": "dsai-app-backend",
   "version": "0.0.0",
-  "author": "Agent Voice Response <info@agentvoiceresponse.com>",
-  "description": "Backend for Agent Voice Response App",
+  "author": "DSAI <info@agentvoiceresponse.com>",
+  "description": "Backend for DSAI App",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

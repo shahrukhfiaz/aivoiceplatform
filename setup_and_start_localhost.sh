@@ -1,11 +1,11 @@
 #!/bin/bash
-# AVR Local Development Setup and Start Script
+# DSAI Local Development Setup and Start Script
 # For Ubuntu/Linux systems
 
 set -e  # Exit on error
 
 echo "=========================================="
-echo "AVR Local Development Setup"
+echo "DSAI Local Development Setup"
 echo "=========================================="
 echo ""
 
@@ -92,7 +92,7 @@ echo ""
 echo "=========================================="
 echo "Step 1: Installing Backend Dependencies"
 echo "=========================================="
-cd avr-app/backend
+cd dsai-app/backend
 if [ ! -d "node_modules" ]; then
     echo "Installing backend dependencies..."
     npm install
@@ -106,7 +106,7 @@ echo ""
 echo "=========================================="
 echo "Step 2: Installing Frontend Dependencies"
 echo "=========================================="
-cd avr-app/frontend
+cd dsai-app/frontend
 if [ ! -d "node_modules" ]; then
     echo "Installing frontend dependencies..."
     npm install
@@ -122,9 +122,9 @@ echo "Step 3: Verifying Environment Files"
 echo "=========================================="
 
 # Check backend .env
-if [ ! -f "avr-app/backend/.env" ]; then
+if [ ! -f "dsai-app/backend/.env" ]; then
     echo -e "${YELLOW}⚠ Backend .env file missing, creating from template...${NC}"
-    cat > avr-app/backend/.env << 'EOF'
+    cat > dsai-app/backend/.env << 'EOF'
 # General
 PORT=3001
 MY_DOMAIN=localhost
@@ -141,12 +141,12 @@ ARI_PASSWORD=asterisk
 # Database
 DATABASE_HOST=127.0.0.1
 DATABASE_PORT=3309
-DATABASE_NAME=avr-app
-DATABASE_USERNAME=avr
+DATABASE_NAME=dsai-app
+DATABASE_USERNAME=dsai
 DATABASE_PASSWORD=
 DATABASE_ROOT_PASSWORD=
 DB_TYPE=sqlite
-DB_PATH=./data/avr.db
+DB_PATH=./data/dsai.db
 
 # Container Ports
 CORE_PORT_START=5000
@@ -156,7 +156,7 @@ TTS_PORT_START=8000
 AMI_PORT=9000
 
 # Network
-AVR_NETWORK=avr
+DSAI_NETWORK=dsai
 
 # JWT
 JWT_SECRET=your-secret-key-change-this-in-production
@@ -172,7 +172,7 @@ DOCKER_SOCKET_PATH=/var/run/docker.sock
 AMI_URL=http://localhost:6006
 
 # Core Image
-CORE_DEFAULT_IMAGE=agentvoiceresponse/avr-core:1.10.1
+CORE_DEFAULT_IMAGE=agentvoiceresponse/dsai-core:1.10.1
 EOF
     echo -e "${GREEN}✓ Backend .env created${NC}"
 else
@@ -180,9 +180,9 @@ else
 fi
 
 # Check frontend .env.local
-if [ ! -f "avr-app/frontend/.env.local" ]; then
+if [ ! -f "dsai-app/frontend/.env.local" ]; then
     echo -e "${YELLOW}⚠ Frontend .env.local missing, creating...${NC}"
-    cat > avr-app/frontend/.env.local << 'EOF'
+    cat > dsai-app/frontend/.env.local << 'EOF'
 NEXT_PUBLIC_API_URL=http://localhost:3001
 NEXT_PUBLIC_WEBRTC_CLIENT_URL=http://localhost:9080
 EOF
@@ -195,19 +195,19 @@ echo ""
 echo "=========================================="
 echo "Step 4: Creating Docker Network"
 echo "=========================================="
-if docker network inspect avr >/dev/null 2>&1; then
-    echo -e "${GREEN}✓ Docker network 'avr' already exists${NC}"
+if docker network inspect dsai >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ Docker network 'dsai' already exists${NC}"
 else
-    echo "Creating Docker network 'avr'..."
-    docker network create avr
-    echo -e "${GREEN}✓ Docker network 'avr' created${NC}"
+    echo "Creating Docker network 'dsai'..."
+    docker network create dsai
+    echo -e "${GREEN}✓ Docker network 'dsai' created${NC}"
 fi
 
 echo ""
 echo "=========================================="
 echo "Step 5: Starting Docker Services"
 echo "=========================================="
-echo "Starting avr-asterisk, avr-ami, and avr-phone..."
+echo "Starting dsai-asterisk, dsai-ami, and dsai-phone..."
 
 # Stop any existing containers
 docker-compose -f docker-compose-local-dev.yml down 2>/dev/null || true
@@ -229,12 +229,12 @@ echo "=========================================="
 echo "Step 6: Starting Backend Service"
 echo "=========================================="
 echo "Starting backend in background..."
-cd avr-app/backend
+cd dsai-app/backend
 nohup npm run start:dev > ../backend.log 2>&1 &
 BACKEND_PID=$!
 echo $BACKEND_PID > ../backend.pid
 echo -e "${GREEN}✓ Backend started (PID: $BACKEND_PID)${NC}"
-echo "Logs: avr-app/backend.log"
+echo "Logs: dsai-app/backend.log"
 cd "$SCRIPT_DIR"
 
 # Wait a bit for backend to start
@@ -245,12 +245,12 @@ echo "=========================================="
 echo "Step 7: Starting Frontend Service"
 echo "=========================================="
 echo "Starting frontend in background..."
-cd avr-app/frontend
+cd dsai-app/frontend
 nohup npm run dev > ../frontend.log 2>&1 &
 FRONTEND_PID=$!
 echo $FRONTEND_PID > ../frontend.pid
 echo -e "${GREEN}✓ Frontend started (PID: $FRONTEND_PID)${NC}"
-echo "Logs: avr-app/frontend.log"
+echo "Logs: dsai-app/frontend.log"
 cd "$SCRIPT_DIR"
 
 echo ""
@@ -268,15 +268,15 @@ echo "  • Asterisk ARI: http://localhost:9088/ari"
 echo "  • AMI Service:  http://localhost:6006"
 echo ""
 echo "Service Logs:"
-echo "  • Backend:  tail -f avr-app/backend.log"
-echo "  • Frontend: tail -f avr-app/frontend.log"
+echo "  • Backend:  tail -f dsai-app/backend.log"
+echo "  • Frontend: tail -f dsai-app/frontend.log"
 echo "  • Docker:   docker-compose -f docker-compose-local-dev.yml logs -f"
 echo ""
 echo "To stop all services:"
 echo "  ./stop_all_services.sh"
 echo ""
 echo "Service PIDs saved to:"
-echo "  • Backend:  avr-app/backend.pid"
-echo "  • Frontend: avr-app/frontend.pid"
+echo "  • Backend:  dsai-app/backend.pid"
+echo "  • Frontend: dsai-app/frontend.pid"
 echo ""
 

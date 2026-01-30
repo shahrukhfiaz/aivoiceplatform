@@ -1,0 +1,24 @@
+{
+  "name": "dsai-phone",
+  "version": "1.0.0",
+  "author": "DSAI <info@agentvoiceresponse.com>",
+  "description": "The official phone of DSAI",
+  "main": "index.html",
+  "scripts": {
+    "build": "docker build -t dsai-phone .",
+    "run": "docker run -p 8080:80 dsai-phone"
+  },  
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agentvoiceresponse/dsai-phone.git"
+  },
+  "homepage": "https://agentvoiceresponse.com",
+  "contributors": [
+    {
+      "name": "Giuseppe Careri",
+      "email": "info@gcareri.com",
+      "url": "https://github.com/gcareri"
+    }
+  ]
+}

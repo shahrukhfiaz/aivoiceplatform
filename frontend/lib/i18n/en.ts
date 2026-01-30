@@ -378,7 +378,7 @@ export const enDictionary = {
       deepgramKeyterms: 'comma-separated terms (e.g., hello,goodbye,order)',
       openaiContextLength: 'number or max (e.g., 15000 or max)',
       deepgramTags: 'comma-separated tags (e.g., support,sales)',
-      name: 'e.g. avr-sts-provider-name',
+      name: 'e.g. dsai-sts-provider-name',
     },
     validation: {
       nameRequired: 'Enter the name',

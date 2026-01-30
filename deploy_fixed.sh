@@ -1,12 +1,12 @@
 #!/bin/bash
-# AVR Production Deployment Script - Fixed Version
+# DSAI Production Deployment Script - Fixed Version
 # Domain: agent.callbust.com
 # Deepgram API Key: ad748182032466add820eed184e6b81aefa06fcd
 
 set -e
 
 echo "========================================"
-echo "AVR Production Deployment"
+echo "DSAI Production Deployment"
 echo "Domain: agent.callbust.com"
 echo "========================================"
 echo ""
@@ -61,23 +61,23 @@ else
     echo "Docker Compose already installed!"
 fi
 
-# Step 4: Create AVR directory
-echo "Step 4: Creating AVR directory..."
-mkdir -p /opt/avr
-cd /opt/avr
+# Step 4: Create DSAI directory
+echo "Step 4: Creating DSAI directory..."
+mkdir -p /opt/dsai
+cd /opt/dsai
 
 # Step 5: Clone repositories
-echo "Step 5: Cloning AVR repositories..."
+echo "Step 5: Cloning DSAI repositories..."
 repos=(
-    "avr-infra"
-    "avr-app"
-    "avr-sts-deepgram"
-    "avr-ami"
-    "avr-webhook"
-    "avr-phone"
-    "avr-asterisk"
-    "avr-vad"
-    "avr-docs"
+    "dsai-infra"
+    "dsai-app"
+    "dsai-sts-deepgram"
+    "dsai-ami"
+    "dsai-webhook"
+    "dsai-phone"
+    "dsai-asterisk"
+    "dsai-vad"
+    "dsai-docs"
 )
 
 for repo in "${repos[@]}"; do
@@ -92,7 +92,7 @@ done
 
 # Step 6: Create production docker-compose file
 echo "Step 6: Setting up production configuration..."
-cd /opt/avr/avr-infra
+cd /opt/dsai/dsai-infra
 mkdir -p asterisk/conf
 mkdir -p asterisk/recordings
 mkdir -p data
@@ -116,38 +116,38 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - avr
+      - dsai
 
-  avr-core:
-    image: agentvoiceresponse/avr-core
+  dsai-core:
+    image: agentvoiceresponse/dsai-core
     platform: linux/x86_64
-    container_name: avr-core
+    container_name: dsai-core
     restart: always
     environment:
       - PORT=5001
-      - STS_URL=ws://avr-sts-deepgram:6033
+      - STS_URL=ws://dsai-sts-deepgram:6033
     ports:
       - 5001:5001
     networks:
-      - avr
+      - dsai
 
-  avr-sts-deepgram:
-    image: agentvoiceresponse/avr-sts-deepgram
+  dsai-sts-deepgram:
+    image: agentvoiceresponse/dsai-sts-deepgram
     platform: linux/x86_64
-    container_name: avr-sts-deepgram
+    container_name: dsai-sts-deepgram
     restart: always
     environment:
       - PORT=6033
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
       - AGENT_PROMPT=${AGENT_PROMPT:-You are a helpful assistant. Be friendly and professional.}
-      - AMI_URL=http://avr-ami:6006
+      - AMI_URL=http://dsai-ami:6006
     networks:
-      - avr
+      - dsai
 
-  avr-asterisk:
-    image: agentvoiceresponse/avr-asterisk
+  dsai-asterisk:
+    image: agentvoiceresponse/dsai-asterisk
     platform: linux/x86_64
-    container_name: avr-asterisk
+    container_name: dsai-asterisk
     restart: always
     ports:
       - 5038:5038
@@ -163,26 +163,26 @@ services:
       - ./asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
       - ./asterisk/recordings:/var/spool/asterisk/monitor
     networks:
-      - avr
+      - dsai
 
-  avr-ami:
-    image: agentvoiceresponse/avr-ami
+  dsai-ami:
+    image: agentvoiceresponse/dsai-ami
     platform: linux/x86_64
-    container_name: avr-ami
+    container_name: dsai-ami
     restart: always
     environment:
       - PORT=6006
-      - AMI_HOST=avr-asterisk
+      - AMI_HOST=dsai-asterisk
       - AMI_PORT=5038
-      - AMI_USERNAME=${AMI_USERNAME:-avr}
-      - AMI_PASSWORD=${AMI_PASSWORD:-avr}
+      - AMI_USERNAME=${AMI_USERNAME:-dsai}
+      - AMI_PASSWORD=${AMI_PASSWORD:-dsai}
     networks:
-      - avr
+      - dsai
 
-  avr-app-backend:
-    image: agentvoiceresponse/avr-app-backend
+  dsai-app-backend:
+    image: agentvoiceresponse/dsai-app-backend
     platform: linux/x86_64
-    container_name: avr-app-backend
+    container_name: dsai-app-backend
     restart: always
     environment:
       - PORT=3001
@@ -190,51 +190,51 @@ services:
       - FRONTEND_URL=https://agent.callbust.com
       - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-      - WEBHOOK_URL=http://avr-app-backend:3001/webhooks
+      - WEBHOOK_URL=http://dsai-app-backend:3001/webhooks
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-change-this-webhook-secret}
-      - ARI_URL=http://avr-asterisk:8088/ari
-      - ARI_USERNAME=${ARI_USERNAME:-avr}
-      - ARI_PASSWORD=${ARI_PASSWORD:-avr}
+      - ARI_URL=http://dsai-asterisk:8088/ari
+      - ARI_USERNAME=${ARI_USERNAME:-dsai}
+      - ARI_PASSWORD=${ARI_PASSWORD:-dsai}
       - TENANT=${TENANT:-demo}
-      - CORE_DEFAULT_IMAGE=agentvoiceresponse/avr-core
+      - CORE_DEFAULT_IMAGE=agentvoiceresponse/dsai-core
       - DB_TYPE=sqlite
       - DB_DATABASE=/app/data/data.db
       - ASTERISK_CONFIG_PATH=/app/asterisk
       - ASTERISK_RECORDINGS_PATH=/app/recordings
     labels:
       - traefik.enable=true
-      - traefik.http.routers.avr-app-backend.entrypoints=web
-      - traefik.http.routers.avr-app-backend.rule=Host(`agent.callbust.com`) && PathPrefix(`/api`)
-      - traefik.http.routers.avr-app-backend.middlewares=strip-api
+      - traefik.http.routers.dsai-app-backend.entrypoints=web
+      - traefik.http.routers.dsai-app-backend.rule=Host(`agent.callbust.com`) && PathPrefix(`/api`)
+      - traefik.http.routers.dsai-app-backend.middlewares=strip-api
       - traefik.http.middlewares.strip-api.stripprefix.prefixes=/api
-      - traefik.http.services.avr-app-backend.loadbalancer.server.port=3001
+      - traefik.http.services.dsai-app-backend.loadbalancer.server.port=3001
     volumes:
       - ./asterisk/conf:/app/asterisk
       - ./data:/app/data
       - ./asterisk/recordings:/app/recordings
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - avr
+      - dsai
 
-  avr-app-frontend:
-    image: agentvoiceresponse/avr-app-frontend
+  dsai-app-frontend:
+    image: agentvoiceresponse/dsai-app-frontend
     platform: linux/x86_64
-    container_name: avr-app-frontend
+    container_name: dsai-app-frontend
     restart: always
     environment:
       - NEXT_PUBLIC_API_URL=https://agent.callbust.com/api
       - NEXT_PUBLIC_WEBRTC_CLIENT_URL=https://phone.agentvoiceresponse.com/index.html
     labels:
       - traefik.enable=true
-      - traefik.http.routers.avr-app-frontend.entrypoints=web
-      - traefik.http.routers.avr-app-frontend.rule=Host(`agent.callbust.com`)
-      - traefik.http.services.avr-app-frontend.loadbalancer.server.port=3000
+      - traefik.http.routers.dsai-app-frontend.entrypoints=web
+      - traefik.http.routers.dsai-app-frontend.rule=Host(`agent.callbust.com`)
+      - traefik.http.services.dsai-app-frontend.loadbalancer.server.port=3000
     networks:
-      - avr
+      - dsai
 
 networks:
-  avr:
-    name: avr
+  dsai:
+    name: dsai
     driver: bridge
     ipam:
       config:
@@ -250,8 +250,8 @@ DEEPGRAM_API_KEY=ad748182032466add820eed184e6b81aefa06fcd
 AGENT_PROMPT=You are a helpful assistant. Be friendly and professional.
 
 # AMI Configuration
-AMI_USERNAME=avr
-AMI_PASSWORD=avr
+AMI_USERNAME=dsai
+AMI_PASSWORD=dsai
 
 # JWT Secret
 JWT_SECRET=$(openssl rand -hex 32)
@@ -276,7 +276,7 @@ sysctl -p >/dev/null 2>&1 || true
 
 # Step 9: Create Docker network
 echo "Step 9: Creating Docker network..."
-docker network create avr 2>/dev/null || true
+docker network create dsai 2>/dev/null || true
 
 # Step 10: Configure firewall
 echo "Step 10: Configuring firewall..."
@@ -284,7 +284,7 @@ ufw --version >/dev/null 2>&1 || apt-get install -y ufw
 ufw allow 22/tcp comment 'SSH' 2>/dev/null || true
 ufw allow 80/tcp comment 'HTTP' 2>/dev/null || true
 ufw allow 443/tcp comment 'HTTPS' 2>/dev/null || true
-ufw allow 5001/tcp comment 'AVR Core' 2>/dev/null || true
+ufw allow 5001/tcp comment 'DSAI Core' 2>/dev/null || true
 ufw allow 5060/tcp comment 'SIP' 2>/dev/null || true
 ufw allow 5060/udp comment 'SIP UDP' 2>/dev/null || true
 ufw allow 10000:20000/udp comment 'RTP Media' 2>/dev/null || true
@@ -292,8 +292,8 @@ ufw allow 8080/tcp comment 'Traefik Dashboard' 2>/dev/null || true
 ufw --force enable 2>/dev/null || echo "UFW already enabled or failed to enable"
 
 # Step 11: Start services
-echo "Step 11: Starting AVR services..."
-cd /opt/avr/avr-infra
+echo "Step 11: Starting DSAI services..."
+cd /opt/dsai/dsai-infra
 docker-compose -f docker-compose-production.yml pull
 docker-compose -f docker-compose-production.yml up -d
 
@@ -317,7 +317,7 @@ echo "Dashboard URL: https://agent.callbust.com"
 echo "Default login: admin / admin"
 echo ""
 echo "To check logs:"
-echo "  cd /opt/avr/avr-infra"
+echo "  cd /opt/dsai/dsai-infra"
 echo "  docker-compose -f docker-compose-production.yml logs -f"
 echo ""
 

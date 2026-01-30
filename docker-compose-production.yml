@@ -25,7 +25,7 @@ services:
       - dsai
 
   dsai-core:
-    image: agentvoiceresponse/avr-core
+    image: agentvoiceresponse/dsai-core
     platform: linux/x86_64
     container_name: dsai-core
     restart: always
@@ -40,7 +40,7 @@ services:
       - dsai
 
   dsai-sts-deepgram:
-    image: agentvoiceresponse/avr-sts-deepgram
+    image: agentvoiceresponse/dsai-sts-deepgram
     platform: linux/x86_64
     container_name: dsai-sts-deepgram
     restart: always
@@ -53,7 +53,7 @@ services:
       - dsai
 
   dsai-asterisk:
-    image: agentvoiceresponse/avr-asterisk
+    image: agentvoiceresponse/dsai-asterisk
     platform: linux/x86_64
     container_name: dsai-asterisk
     restart: always
@@ -84,7 +84,7 @@ services:
       - dsai
 
   dsai-ami:
-    image: agentvoiceresponse/avr-ami
+    image: agentvoiceresponse/dsai-ami
     platform: linux/x86_64
     container_name: dsai-ami
     restart: always
@@ -92,13 +92,13 @@ services:
       - PORT=6006
       - AMI_HOST=dsai-asterisk
       - AMI_PORT=5038
-      - AMI_USERNAME=${AMI_USERNAME:-avr}
-      - AMI_PASSWORD=${AMI_PASSWORD:-avr}
+      - AMI_USERNAME=${AMI_USERNAME:-dsai}
+      - AMI_PASSWORD=${AMI_PASSWORD:-dsai}
     networks:
       - dsai
 
   dsai-backend:
-    image: agentvoiceresponse/avr-app-backend
+    image: agentvoiceresponse/dsai-app-backend
     platform: linux/x86_64
     container_name: dsai-backend
     restart: always
@@ -111,11 +111,11 @@ services:
       - WEBHOOK_URL=http://dsai-backend:3001/webhooks
       - WEBHOOK_SECRET=${WEBHOOK_SECRET:-change-this-webhook-secret}
       - ARI_URL=http://dsai-asterisk:8088/ari
-      - ARI_USERNAME=${ARI_USERNAME:-avr}
-      - ARI_PASSWORD=${ARI_PASSWORD:-avr}
+      - ARI_USERNAME=${ARI_USERNAME:-dsai}
+      - ARI_PASSWORD=${ARI_PASSWORD:-dsai}
       - AMI_SERVICE_URL=http://dsai-ami:6006
       - TENANT=${TENANT:-demo}
-      - CORE_DEFAULT_IMAGE=agentvoiceresponse/avr-core
+      - CORE_DEFAULT_IMAGE=agentvoiceresponse/dsai-core
       - DB_TYPE=sqlite
       - DB_DATABASE=/app/data/data.db
       - ASTERISK_CONFIG_PATH=/app/asterisk
@@ -139,7 +139,7 @@ services:
       - dsai
 
   dsai-frontend:
-    image: agentvoiceresponse/avr-app-frontend
+    image: agentvoiceresponse/dsai-app-frontend
     platform: linux/x86_64
     container_name: dsai-frontend
     restart: always

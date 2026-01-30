@@ -378,7 +378,7 @@ export const itDictionary = {
       deepgramKeyterms: 'termini separati da virgola (es. ciao,arrivederci,ordine)',
       openaiContextLength: 'numero o max (es. 15000 o max)',
       deepgramTags: 'tag separati da virgola (es. supporto,vendite)',
-      name: 'es. avr-sts-nome-provider',
+      name: 'es. dsai-sts-nome-provider',
     },
     validation: {
       nameRequired: 'Inserisci il nome',

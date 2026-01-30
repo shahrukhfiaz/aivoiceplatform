@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "╔════════════════════════════════════════════════════════════════════╗"
-echo "║              AVR Complete Services Health Check                    ║"
+echo "║              DSAI Complete Services Health Check                    ║"
 echo "╚════════════════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -44,7 +44,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 
 # Core Infrastructure
 echo "Core Infrastructure:"
-for container in avr-asterisk avr-ami avr-phone; do
+for container in dsai-asterisk dsai-ami dsai-phone; do
     if docker ps --format "{{.Names}}" | grep -q "^${container}$"; then
         uptime=$(docker ps --format "{{.Names}} {{.Status}}" | grep "^${container}" | awk '{print $2, $3}')
         echo "   ✅ $container: Running ($uptime)"
@@ -56,18 +56,18 @@ echo ""
 
 # Agent Containers
 echo "Agent Containers:"
-core_containers=$(docker ps --format "{{.Names}}" | grep "avr-core-" | wc -l)
-sts_containers=$(docker ps --format "{{.Names}}" | grep "avr-sts-" | wc -l)
+core_containers=$(docker ps --format "{{.Names}}" | grep "dsai-core-" | wc -l)
+sts_containers=$(docker ps --format "{{.Names}}" | grep "dsai-sts-" | wc -l)
 echo "   Core containers: $core_containers"
 echo "   STS containers: $sts_containers"
 
 if [ "$sts_containers" -gt 0 ]; then
-    for container in $(docker ps --format "{{.Names}}" | grep "avr-sts-"); do
+    for container in $(docker ps --format "{{.Names}}" | grep "dsai-sts-"); do
         echo "   ✅ $container"
     done
 fi
 if [ "$core_containers" -gt 0 ]; then
-    for container in $(docker ps --format "{{.Names}}" | grep "avr-core-"); do
+    for container in $(docker ps --format "{{.Names}}" | grep "dsai-core-"); do
         echo "   ✅ $container"
     done
 fi
@@ -75,7 +75,7 @@ echo ""
 
 # Provider Services
 echo "Provider Services:"
-for container in avr-asr-whisper avr-asr-vosk avr-llm-openai avr-kokoro avr-ollama avr-ollama-web; do
+for container in dsai-asr-whisper dsai-asr-vosk dsai-llm-openai dsai-kokoro dsai-ollama dsai-ollama-web; do
     if docker ps --format "{{.Names}}" | grep -q "^${container}$"; then
         echo "   ✅ $container: Running"
     else
@@ -111,12 +111,12 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🔗 DOCKER NETWORK"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-if docker network ls | grep -q " avr "; then
-    echo "   ✅ Docker network 'avr': Exists"
-    connected=$(docker network inspect avr --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | wc -w)
+if docker network ls | grep -q " dsai "; then
+    echo "   ✅ Docker network 'dsai': Exists"
+    connected=$(docker network inspect dsai --format '{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null | wc -w)
     echo "   ✅ Connected containers: $connected"
 else
-    echo "   ❌ Docker network 'avr': NOT FOUND"
+    echo "   ❌ Docker network 'dsai': NOT FOUND"
 fi
 echo ""
 
@@ -124,15 +124,15 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "💾 VOLUME MOUNTS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-if docker ps | grep -q avr-asterisk; then
-    mount_check=$(docker inspect avr-asterisk --format '{{range .Mounts}}{{if eq .Destination "/var/spool/asterisk/monitor"}}MOUNTED{{end}}{{end}}')
+if docker ps | grep -q dsai-asterisk; then
+    mount_check=$(docker inspect dsai-asterisk --format '{{range .Mounts}}{{if eq .Destination "/var/spool/asterisk/monitor"}}MOUNTED{{end}}{{end}}')
     if [ "$mount_check" = "MOUNTED" ]; then
         echo "   ✅ Asterisk recordings: Mounted"
     else
         echo "   ❌ Asterisk recordings: NOT MOUNTED"
     fi
     
-    config_mount=$(docker inspect avr-asterisk --format '{{range .Mounts}}{{if eq .Destination "/etc/asterisk/my_extensions.conf"}}MOUNTED{{end}}{{end}}')
+    config_mount=$(docker inspect dsai-asterisk --format '{{range .Mounts}}{{if eq .Destination "/etc/asterisk/my_extensions.conf"}}MOUNTED{{end}}{{end}}')
     if [ "$config_mount" = "MOUNTED" ]; then
         echo "   ✅ Asterisk config: Mounted"
     else
@@ -147,7 +147,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "💽 DATABASE"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-db_path="/home/shahrukhfiaz/AVR Multiple Campaigns/AVR Multiple Campaigns/data/data.db"
+db_path="/home/shahrukhfiaz/DSAI Multiple Campaigns/DSAI Multiple Campaigns/data/data.db"
 if [ -f "$db_path" ]; then
     db_size=$(du -h "$db_path" | awk '{print $1}')
     echo "   ✅ SQLite Database: Exists ($db_size)"
@@ -160,7 +160,7 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🎙️  RECORDINGS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-recording_dir="/home/shahrukhfiaz/AVR Multiple Campaigns/AVR Multiple Campaigns/asterisk/recordings/demo"
+recording_dir="/home/shahrukhfiaz/DSAI Multiple Campaigns/DSAI Multiple Campaigns/asterisk/recordings/demo"
 if [ -d "$recording_dir" ]; then
     recording_count=$(ls "$recording_dir" 2>/dev/null | wc -l)
     total_size=$(du -sh "$recording_dir" 2>/dev/null | awk '{print $1}')
@@ -170,7 +170,7 @@ else
     echo "   ❌ Recording directory: NOT FOUND"
 fi
 
-if grep -q "ASTERISK_MONITOR_PATH" "/home/shahrukhfiaz/AVR Multiple Campaigns/AVR Multiple Campaigns/avr-app/backend/.env" 2>/dev/null; then
+if grep -q "ASTERISK_MONITOR_PATH" "/home/shahrukhfiaz/DSAI Multiple Campaigns/DSAI Multiple Campaigns/dsai-app/backend/.env" 2>/dev/null; then
     echo "   ✅ Backend recording path: Configured"
 else
     echo "   ❌ Backend recording path: NOT CONFIGURED"
@@ -185,7 +185,7 @@ total_containers=$(docker ps | wc -l)
 ((total_containers--))  # Subtract header line
 echo "   Total running containers: $total_containers"
 
-if [ -n "$backend_pid" ] && docker ps | grep -q avr-asterisk; then
+if [ -n "$backend_pid" ] && docker ps | grep -q dsai-asterisk; then
     echo "   ✅ CORE SERVICES: OPERATIONAL"
 else
     echo "   ⚠️  CORE SERVICES: CHECK REQUIRED"

@@ -119,7 +119,7 @@ export default function ProvidersPage() {
       type: 'STS',
       label: dictionary.providers.templates.stsOpenai.label,
       description: dictionary.providers.templates.stsOpenai.description,
-      defaultImage: 'agentvoiceresponse/avr-sts-openai',
+      defaultImage: 'agentvoiceresponse/dsai-sts-openai',
       defaults: {
         OPENAI_MODEL: 'gpt-4o-realtime-preview',
         OPENAI_VOICE: 'alloy',
@@ -219,7 +219,7 @@ export default function ProvidersPage() {
       type: 'STS',
       label: dictionary.providers.templates.stsElevenlabs.label,
       description: dictionary.providers.templates.stsElevenlabs.description,
-      defaultImage: 'agentvoiceresponse/avr-sts-elevenlabs',
+      defaultImage: 'agentvoiceresponse/dsai-sts-elevenlabs',
       fields: [
         {
           key: 'ELEVENLABS_AGENT_ID',
@@ -241,7 +241,7 @@ export default function ProvidersPage() {
       type: 'STS',
       label: dictionary.providers.templates.stsGemini.label,
       description: dictionary.providers.templates.stsGemini.description,
-      defaultImage: 'agentvoiceresponse/avr-sts-gemini',
+      defaultImage: 'agentvoiceresponse/dsai-sts-gemini',
       defaults: {
         GEMINI_MODEL: 'gemini-2.5-flash-preview-native-audio-dialog',
       },
@@ -272,7 +272,7 @@ export default function ProvidersPage() {
       type: 'STS',
       label: dictionary.providers.templates.stsDeepgram.label,
       description: dictionary.providers.templates.stsDeepgram.description,
-      defaultImage: 'agentvoiceresponse/avr-sts-deepgram',
+      defaultImage: 'agentvoiceresponse/dsai-sts-deepgram',
       defaults: {
         DEEPGRAM_ASR_MODEL: 'nova-3',
         DEEPGRAM_TTS_MODEL: 'aura-2-thalia-en',
@@ -421,7 +421,7 @@ export default function ProvidersPage() {
         {
           key: 'AMI_URL',
           label: dictionary.providers.fieldsExtra.amiUrl,
-          placeholder: 'http://avr-ami:6006',
+          placeholder: 'http://dsai-ami:6006',
           advanced: true,
         },
       ],

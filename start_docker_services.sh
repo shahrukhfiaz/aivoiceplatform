@@ -1,12 +1,12 @@
 #!/bin/bash
-# Start Docker services for AVR (requires docker permissions)
+# Start Docker services for DSAI (requires docker permissions)
 
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-echo "Starting AVR Docker services..."
+echo "Starting DSAI Docker services..."
 
 # Check Docker access
 if ! docker ps >/dev/null 2>&1; then
@@ -18,12 +18,12 @@ if ! docker ps >/dev/null 2>&1; then
 fi
 
 # Create network if it doesn't exist
-if ! docker network inspect avr >/dev/null 2>&1; then
-    echo "Creating Docker network 'avr'..."
-    docker network create avr
+if ! docker network inspect dsai >/dev/null 2>&1; then
+    echo "Creating Docker network 'dsai'..."
+    docker network create dsai
     echo "✓ Network created"
 else
-    echo "✓ Network 'avr' already exists"
+    echo "✓ Network 'dsai' already exists"
 fi
 
 # Start services

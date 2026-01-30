@@ -1,6 +1,6 @@
 services:
   dsai-asterisk:
-    image: agentvoiceresponse/avr-asterisk
+    image: agentvoiceresponse/dsai-asterisk
     platform: linux/x86_64
     container_name: dsai-asterisk
     restart: unless-stopped
@@ -12,12 +12,12 @@ services:
       - "9090:8090"    # WebSocket WS (mapped from 8090)
       - "10000-10050:10000-10050/udp"  # RTP
     volumes:
-      - ./avr-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
-      - ./avr-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
-      - ./avr-infra/asterisk/conf/extensions.conf:/etc/asterisk/my_extensions.conf
-      - ./avr-infra/asterisk/conf/queues.conf:/etc/asterisk/my_queues.conf
-      - ./avr-infra/asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
-      - ./avr-infra/asterisk/recordings:/var/spool/asterisk/monitor
+      - ./dsai-infra/asterisk/conf/manager.conf:/etc/asterisk/my_manager.conf
+      - ./dsai-infra/asterisk/conf/pjsip.conf:/etc/asterisk/my_pjsip.conf
+      - ./dsai-infra/asterisk/conf/extensions.conf:/etc/asterisk/my_extensions.conf
+      - ./dsai-infra/asterisk/conf/queues.conf:/etc/asterisk/my_queues.conf
+      - ./dsai-infra/asterisk/conf/ari.conf:/etc/asterisk/my_ari.conf
+      - ./dsai-infra/asterisk/recordings:/var/spool/asterisk/monitor
     networks:
       - dsai
     environment:
@@ -25,7 +25,7 @@ services:
       - ARI_PASSWORD=asterisk
 
   dsai-ami:
-    image: agentvoiceresponse/avr-ami
+    image: agentvoiceresponse/dsai-ami
     platform: linux/x86_64
     container_name: dsai-ami
     restart: unless-stopped
@@ -33,8 +33,8 @@ services:
       - PORT=6006
       - AMI_HOST=dsai-asterisk
       - AMI_PORT=5038
-      - AMI_USERNAME=avr
-      - AMI_PASSWORD=avr
+      - AMI_USERNAME=dsai
+      - AMI_PASSWORD=dsai
     ports:
       - "6006:6006"
     networks:
@@ -44,7 +44,7 @@ services:
 
   dsai-phone:
     build:
-      context: ./avr-phone
+      context: ./dsai-phone
       dockerfile: Dockerfile
     platform: linux/x86_64
     container_name: dsai-phone

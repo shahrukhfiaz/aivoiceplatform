@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# AVR Recording Fixes Deployment Script
+# DSAI Recording Fixes Deployment Script
 # This script deploys the recording fixes to production server
 
 set -e  # Exit on any error
 
 echo "=================================="
-echo "AVR Recording Fixes Deployment"
+echo "DSAI Recording Fixes Deployment"
 echo "=================================="
 echo ""
 
@@ -19,30 +19,30 @@ NC='\033[0m' # No Color
 # Server details
 SERVER_USER="root"
 SERVER_IP="192.241.179.25"
-SERVER_PATH="/opt/avr/avr-app"
+SERVER_PATH="/opt/dsai/dsai-app"
 
 echo -e "${YELLOW}Step 1: Building Backend Docker Image${NC}"
 echo "--------------------------------------"
-cd avr-app/backend
+cd dsai-app/backend
 echo "Installing dependencies..."
 npm install
 echo "Building TypeScript..."
 npm run build
 echo "Building Docker image..."
-docker build -t agentvoiceresponse/avr-app-backend:latest .
+docker build -t agentvoiceresponse/dsai-app-backend:latest .
 cd ../..
 echo -e "${GREEN}✓ Backend image built successfully${NC}"
 echo ""
 
 echo -e "${YELLOW}Step 2: Building Frontend Docker Image${NC}"
 echo "---------------------------------------"
-cd avr-app/frontend
+cd dsai-app/frontend
 echo "Installing dependencies (including @radix-ui/react-switch)..."
 npm install
 echo "Building Next.js application..."
 npm run build
 echo "Building Docker image..."
-docker build -t agentvoiceresponse/avr-app-frontend:latest .
+docker build -t agentvoiceresponse/dsai-app-frontend:latest .
 cd ../..
 echo -e "${GREEN}✓ Frontend image built successfully${NC}"
 echo ""
@@ -50,22 +50,22 @@ echo ""
 echo -e "${YELLOW}Step 3: Saving Docker Images${NC}"
 echo "-----------------------------"
 echo "Saving backend image..."
-docker save agentvoiceresponse/avr-app-backend:latest | gzip > avr-app-backend.tar.gz
+docker save agentvoiceresponse/dsai-app-backend:latest | gzip > dsai-app-backend.tar.gz
 echo "Saving frontend image..."
-docker save agentvoiceresponse/avr-app-frontend:latest | gzip > avr-app-frontend.tar.gz
+docker save agentvoiceresponse/dsai-app-frontend:latest | gzip > dsai-app-frontend.tar.gz
 echo -e "${GREEN}✓ Images saved successfully${NC}"
 echo ""
 
 echo -e "${YELLOW}Step 4: Uploading to Production Server${NC}"
 echo "---------------------------------------"
 echo "Uploading backend image..."
-scp avr-app-backend.tar.gz ${SERVER_USER}@${SERVER_IP}:/tmp/
+scp dsai-app-backend.tar.gz ${SERVER_USER}@${SERVER_IP}:/tmp/
 echo "Uploading frontend image..."
-scp avr-app-frontend.tar.gz ${SERVER_USER}@${SERVER_IP}:/tmp/
+scp dsai-app-frontend.tar.gz ${SERVER_USER}@${SERVER_IP}:/tmp/
 echo "Uploading updated docker-compose file..."
 scp docker-compose-production.yml ${SERVER_USER}@${SERVER_IP}:${SERVER_PATH}/
 echo "Uploading updated backend service file..."
-scp avr-app/backend/src/recordings/recordings.service.ts ${SERVER_USER}@${SERVER_IP}:/tmp/
+scp dsai-app/backend/src/recordings/recordings.service.ts ${SERVER_USER}@${SERVER_IP}:/tmp/
 echo -e "${GREEN}✓ Files uploaded successfully${NC}"
 echo ""
 
@@ -74,11 +74,11 @@ echo "---------------------------------"
 ssh ${SERVER_USER}@${SERVER_IP} << 'ENDSSH'
 cd /tmp
 echo "Loading backend image..."
-docker load < avr-app-backend.tar.gz
+docker load < dsai-app-backend.tar.gz
 echo "Loading frontend image..."
-docker load < avr-app-frontend.tar.gz
+docker load < dsai-app-frontend.tar.gz
 echo "Cleaning up..."
-rm -f avr-app-backend.tar.gz avr-app-frontend.tar.gz
+rm -f dsai-app-backend.tar.gz dsai-app-frontend.tar.gz
 ENDSSH
 echo -e "${GREEN}✓ Images loaded on server${NC}"
 echo ""
@@ -86,7 +86,7 @@ echo ""
 echo -e "${YELLOW}Step 6: Creating Recordings Directory${NC}"
 echo "--------------------------------------"
 ssh ${SERVER_USER}@${SERVER_IP} << 'ENDSSH'
-cd /opt/avr/avr-app
+cd /opt/dsai/dsai-app
 # Create recordings directory structure
 mkdir -p asterisk/recordings/demo
 chmod 755 asterisk/recordings
@@ -100,7 +100,7 @@ echo ""
 echo -e "${YELLOW}Step 7: Restarting Services${NC}"
 echo "----------------------------"
 ssh ${SERVER_USER}@${SERVER_IP} << 'ENDSSH'
-cd /opt/avr/avr-app
+cd /opt/dsai/dsai-app
 echo "Stopping services..."
 docker-compose -f docker-compose-production.yml down
 echo "Starting services with new images..."
@@ -114,25 +114,25 @@ echo ""
 echo -e "${YELLOW}Step 8: Verifying Services${NC}"
 echo "---------------------------"
 ssh ${SERVER_USER}@${SERVER_IP} << 'ENDSSH'
-cd /opt/avr/avr-app
+cd /opt/dsai/dsai-app
 echo "Running containers:"
 docker-compose -f docker-compose-production.yml ps
 echo ""
 echo "Backend logs (last 20 lines):"
-docker logs --tail 20 avr-app-backend
+docker logs --tail 20 dsai-app-backend
 echo ""
 echo "Checking backend environment variable:"
-docker exec avr-app-backend env | grep ASTERISK_MONITOR_PATH
+docker exec dsai-app-backend env | grep ASTERISK_MONITOR_PATH
 echo ""
 echo "Checking recordings directory from backend container:"
-docker exec avr-app-backend ls -la /app/recordings/demo/ 2>/dev/null || echo "Directory exists but is empty (no recordings yet)"
+docker exec dsai-app-backend ls -la /app/recordings/demo/ 2>/dev/null || echo "Directory exists but is empty (no recordings yet)"
 ENDSSH
 echo -e "${GREEN}✓ Services verified${NC}"
 echo ""
 
 echo -e "${YELLOW}Step 9: Cleaning Up Local Files${NC}"
 echo "--------------------------------"
-rm -f avr-app-backend.tar.gz avr-app-frontend.tar.gz
+rm -f dsai-app-backend.tar.gz dsai-app-frontend.tar.gz
 echo -e "${GREEN}✓ Cleanup complete${NC}"
 echo ""
 
@@ -149,7 +149,7 @@ echo "5. Make a test call"
 echo "6. Check Recordings page"
 echo ""
 echo "Useful Commands:"
-echo "  - View backend logs:  ssh root@192.241.179.25 'docker logs -f avr-app-backend'"
-echo "  - View frontend logs: ssh root@192.241.179.25 'docker logs -f avr-app-frontend'"
-echo "  - List recordings:    ssh root@192.241.179.25 'ls -lh /opt/avr/avr-app/asterisk/recordings/demo/'"
+echo "  - View backend logs:  ssh root@192.241.179.25 'docker logs -f dsai-app-backend'"
+echo "  - View frontend logs: ssh root@192.241.179.25 'docker logs -f dsai-app-frontend'"
+echo "  - List recordings:    ssh root@192.241.179.25 'ls -lh /opt/dsai/dsai-app/asterisk/recordings/demo/'"
 echo ""
