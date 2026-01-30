@@ -79,7 +79,7 @@ export class WebhooksService {
   ): Promise<void> {
     const existingCall = await this.callRepository.findOne({
       where: { uuid: event.uuid },
-      relations: ['events'],
+      relations: ['events', 'agent'],
     });
 
     let call = existingCall;
@@ -102,12 +102,16 @@ export class WebhooksService {
     }
 
     // Always populate provider info and call type if not already set
-    if (agentId && (!call.providerId || !call.callType)) {
+    if (agentId && (!call.providerId || !call.callType || !call.agent)) {
       const agent = await this.agentRepository.findOne({
         where: { id: agentId },
         relations: ['providerSts', 'providerLlm'],
       });
       if (agent) {
+        // Attach agent to call for SSE broadcasts
+        if (!call.agent) {
+          call.agent = agent;
+        }
         // Use STS provider for STS mode, or LLM provider for pipeline mode
         const provider = agent.providerSts || agent.providerLlm;
         if (provider && !call.providerId) {
@@ -302,7 +306,7 @@ export class WebhooksService {
       id: call.id,
       uuid: call.uuid,
       agentId: call.agentId,
-      agentName: agentName || null,
+      agentName: agentName || call.agent?.name || null,
       callType: call.callType,
       fromNumber: call.fromNumber,
       toNumber: call.toNumber,
@@ -314,6 +318,7 @@ export class WebhooksService {
       endedAt: call.endedAt?.toISOString() || null,
       createdAt: call.createdAt?.toISOString() || null,
       hasRecording: false, // Will be determined later
+      twilioCallSid: call.twilioCallSid || null,
     };
   }
 

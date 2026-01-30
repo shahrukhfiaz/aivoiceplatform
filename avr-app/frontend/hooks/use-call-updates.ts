@@ -19,6 +19,7 @@ export interface CallUpdatePayload {
   endedAt?: string | null;
   createdAt?: string | null;
   hasRecording?: boolean;
+  twilioCallSid?: string | null;
 }
 
 export interface AgentUpdatePayload {
