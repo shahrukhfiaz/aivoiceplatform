@@ -125,7 +125,7 @@ let TransportReconnectionAttempts = parseInt(getDbItem("TransportReconnectionAtt
 let TransportReconnectionTimeout = parseInt(getDbItem("TransportReconnectionTimeout", 3));       // The time in seconds to wait between WebSocket reconnection attempts.
 
 let SubscribeToYourself = (getDbItem("SubscribeToYourself", "0") == "1");              // Enable Subscribe to your own uri. (Useful to understand how other buddies see you.)
-let VoiceMailSubscribe = (getDbItem("VoiceMailSubscribe", "1") == "1");                // Enable Subscribe to voicemail
+let VoiceMailSubscribe = (getDbItem("VoiceMailSubscribe", "0") == "1");                // Enable Subscribe to voicemail (disabled by default)
 let VoicemailDid = getDbItem("VoicemailDid", "");                                      // Number to dial for VoicemialMain()
 let SubscribeVoicemailExpires = parseInt(getDbItem("SubscribeVoicemailExpires", 300)); // Voceimail Subscription expiry time (in seconds)
 let ContactUserName = getDbItem("ContactUserName", "");                                // Optional name for contact header uri

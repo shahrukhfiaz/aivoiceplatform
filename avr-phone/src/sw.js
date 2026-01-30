@@ -57,17 +57,29 @@ const CacheItems = [
 
 self.addEventListener('install', function(event){
     console.log("Service Worker: Install");
-    event.waitUntil(caches.open(cacheID).then(function(cache){
-        console.log("Cache open, adding Items:", CacheItems);
-        return cache.addAll(CacheItems);
+    event.waitUntil(caches.open(cacheID).then(async function(cache){
+        console.log("Cache open, adding Items individually...");
+        // Cache items individually to avoid failing if any single item fails
+        let successCount = 0;
+        let failCount = 0;
+        for (const item of CacheItems) {
+            try {
+                await cache.add(item);
+                successCount++;
+            } catch (error) {
+                failCount++;
+                console.warn("Failed to cache:", item);
+            }
+        }
+        console.log("Cache complete. Success:", successCount, "Failed:", failCount);
     }).then(function(){
-        console.log("Items Added to Cache, skipWaiting");
+        console.log("Service Worker: skipWaiting");
         // Skip waiting to activate
         self.skipWaiting();
     }).catch(function(error){
         console.warn("Error opening Cache:", error);
         // Skip waiting to activate
-        self.skipWaiting(); 
+        self.skipWaiting();
     }));
 });
 
