@@ -599,7 +599,7 @@ export class AgentsService {
   }
 
   private buildContainerName(agentId: string, type?: string) {
-    return type ? `dsai-${type}-${agentId}` : `dsai-core-${agentId}`;
+    return type ? `avr-${type}-${agentId}` : `avr-core-${agentId}`;
   }
 
   private getContainerNames(agentId: string, mode: AgentMode): string[] {
