@@ -27,6 +27,10 @@ export class CreateTrunkDto {
   providerType?: 'generic' | 'twilio' | 'telnyx' | 'vonage';
 
   @IsOptional()
+  @IsIn(['userpass', 'ip'])
+  authMethod?: 'userpass' | 'ip';
+
+  @IsOptional()
   @IsString()
   host?: string;
 

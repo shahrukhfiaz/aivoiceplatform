@@ -10,6 +10,7 @@ import { Agent } from '../agents/agent.entity';
 export type TrunkDirection = 'inbound' | 'outbound';
 export type TrunkTransport = 'udp' | 'tcp' | 'tls' | 'wss';
 export type TrunkProviderType = 'generic' | 'twilio' | 'telnyx' | 'vonage';
+export type TrunkAuthMethod = 'userpass' | 'ip';
 
 @Entity()
 export class Trunk {
@@ -34,13 +35,17 @@ export class Trunk {
   @Column({ type: 'integer', default: 5060 })
   port: number;
 
-  // Username for authentication with provider
+  // Authentication method: 'userpass' for username/password, 'ip' for IP-based (direct IP trunk)
+  @Column({ type: 'text', default: 'userpass' })
+  authMethod: TrunkAuthMethod;
+
+  // Username for authentication with provider (required for userpass auth)
   @Column({ nullable: true })
   username?: string;
 
-  // Password for authentication with provider
-  @Column()
-  password: string;
+  // Password for authentication with provider (required for userpass auth, null for IP auth)
+  @Column({ nullable: true })
+  password?: string | null;
 
   @Column({ default: 'udp' })
   transport: TrunkTransport;

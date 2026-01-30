@@ -57,6 +57,10 @@ import {
 const DIRECTION_OPTIONS = ['inbound', 'outbound'] as const;
 type DirectionValue = (typeof DIRECTION_OPTIONS)[number];
 
+const AUTH_METHOD_OPTIONS = ['userpass', 'ip'] as const;
+type AuthMethodValue = (typeof AUTH_METHOD_OPTIONS)[number];
+const DEFAULT_AUTH_METHOD: AuthMethodValue = 'userpass';
+
 const TRANSPORT_OPTIONS = ['udp', 'tcp', 'tls', 'wss'] as const;
 type TransportValue = (typeof TRANSPORT_OPTIONS)[number];
 const DEFAULT_TRANSPORT: TransportValue = 'udp';
@@ -81,6 +85,7 @@ const makeTrunkSchema = (dict: Dictionary) =>
       .min(2, dict.trunks.validation.nameMin)
       .max(50, dict.trunks.validation.nameMax),
     direction: z.enum(DIRECTION_OPTIONS),
+    authMethod: z.enum(AUTH_METHOD_OPTIONS),
     host: z.string().optional(),
     port: z.number().int().min(1).max(65535).optional(),
     username: z.string().optional(),
@@ -124,10 +129,11 @@ interface TrunkDto {
   id: string;
   name: string;
   direction: 'inbound' | 'outbound';
+  authMethod?: 'userpass' | 'ip';
   host?: string;
   port: number;
   username?: string;
-  password: string;
+  password?: string;
   transport: 'udp' | 'tcp' | 'tls' | 'wss';
   codecs?: string;
   didNumber?: string;
@@ -182,6 +188,7 @@ export default function TrunksPage() {
   const defaultFormValues: TrunkFormValues = {
     name: '',
     direction: 'inbound',
+    authMethod: DEFAULT_AUTH_METHOD,
     host: '',
     port: 5060,
     username: '',
@@ -210,6 +217,8 @@ export default function TrunksPage() {
 
   const watchDirection = form.watch('direction');
   const editWatchDirection = editForm.watch('direction');
+  const watchAuthMethod = form.watch('authMethod');
+  const editWatchAuthMethod = editForm.watch('authMethod');
   const watchRegisterEnabled = form.watch('registerEnabled');
   const editWatchRegisterEnabled = editForm.watch('registerEnabled');
 
@@ -280,6 +289,7 @@ export default function TrunksPage() {
       const body: Record<string, unknown> = {
         name: values.name.trim(),
         direction: values.direction,
+        authMethod: values.authMethod,
         transport: values.transport,
         codecs: values.codecs,
         recordingEnabled: values.recordingEnabled,
@@ -289,17 +299,27 @@ export default function TrunksPage() {
       if (values.direction === 'outbound') {
         body.host = values.host;
         body.port = values.port;
-        body.username = values.username;
-        if (values.password) {
-          body.password = values.password;
+        // Only include username/password for userpass auth
+        if (values.authMethod === 'userpass') {
+          body.username = values.username;
+          if (values.password) {
+            body.password = values.password;
+          }
+          body.registerEnabled = values.registerEnabled;
+          body.registerInterval = values.registerInterval;
         }
-        body.registerEnabled = values.registerEnabled;
-        body.registerInterval = values.registerInterval;
         body.outboundCallerId = values.outboundCallerId;
       } else {
         body.didNumber = values.didNumber;
         body.agentId = values.agentId || undefined;
         body.allowedIps = values.allowedIps;
+        // Only include username/password for userpass auth on inbound
+        if (values.authMethod === 'userpass') {
+          body.username = values.username;
+          if (values.password) {
+            body.password = values.password;
+          }
+        }
       }
 
       await apiFetch<TrunkDto>('/trunks', {
@@ -331,6 +351,7 @@ export default function TrunksPage() {
     editForm.reset({
       name: trunk.name,
       direction: trunk.direction,
+      authMethod: trunk.authMethod || DEFAULT_AUTH_METHOD,
       host: trunk.host || '',
       port: trunk.port || 5060,
       username: trunk.username || '',
@@ -361,6 +382,7 @@ export default function TrunksPage() {
       const body: Record<string, unknown> = {
         name: values.name.trim(),
         direction: values.direction,
+        authMethod: values.authMethod,
         transport: values.transport,
         codecs: values.codecs,
         recordingEnabled: values.recordingEnabled,
@@ -370,17 +392,27 @@ export default function TrunksPage() {
       if (values.direction === 'outbound') {
         body.host = values.host;
         body.port = values.port;
-        body.username = values.username;
-        if (values.password) {
-          body.password = values.password;
+        // Only include username/password for userpass auth
+        if (values.authMethod === 'userpass') {
+          body.username = values.username;
+          if (values.password) {
+            body.password = values.password;
+          }
+          body.registerEnabled = values.registerEnabled;
+          body.registerInterval = values.registerInterval;
         }
-        body.registerEnabled = values.registerEnabled;
-        body.registerInterval = values.registerInterval;
         body.outboundCallerId = values.outboundCallerId;
       } else {
         body.didNumber = values.didNumber;
         body.agentId = values.agentId || null;
         body.allowedIps = values.allowedIps;
+        // Only include username/password for userpass auth on inbound
+        if (values.authMethod === 'userpass') {
+          body.username = values.username;
+          if (values.password) {
+            body.password = values.password;
+          }
+        }
       }
 
       await apiFetch<TrunkDto>(`/trunks/${editingTrunk.id}`, {
@@ -440,6 +472,7 @@ export default function TrunksPage() {
   const renderFormFields = (
     formInstance: typeof form | typeof editForm,
     direction: DirectionValue,
+    authMethod: AuthMethodValue,
     registerEnabled: boolean | undefined,
   ) => (
     <>
@@ -489,6 +522,37 @@ export default function TrunksPage() {
         )}
       />
 
+      <FormField
+        control={formInstance.control}
+        name="authMethod"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Authentication Method</FormLabel>
+            <FormControl>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select authentication method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="userpass">
+                    Username/Password
+                  </SelectItem>
+                  <SelectItem value="ip">
+                    Direct IP (No Password)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <FormDescription>
+              {authMethod === 'ip'
+                ? 'Direct IP trunks use IP-based authentication without username/password'
+                : 'Standard SIP authentication with username and password'}
+            </FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
       {direction === 'outbound' ? (
         <>
           <div className="grid grid-cols-2 gap-4">
@@ -520,35 +584,37 @@ export default function TrunksPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={formInstance.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{dictionary.trunks.fields.username}</FormLabel>
-                  <FormControl>
-                    <Input placeholder={dictionary.trunks.placeholders.username} autoComplete="off" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={formInstance.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{dictionary.trunks.fields.password}</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder={dictionary.trunks.placeholders.password} autoComplete="new-password" {...field} />
-                  </FormControl>
-                  <FormDescription>{dictionary.trunks.placeholders.passwordHint}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          {authMethod === 'userpass' && (
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={formInstance.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{dictionary.trunks.fields.username}</FormLabel>
+                    <FormControl>
+                      <Input placeholder={dictionary.trunks.placeholders.username} autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={formInstance.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{dictionary.trunks.fields.password}</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder={dictionary.trunks.placeholders.password} autoComplete="new-password" {...field} />
+                    </FormControl>
+                    <FormDescription>{dictionary.trunks.placeholders.passwordHint}</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
 
           <FormField
             control={formInstance.control}
@@ -564,36 +630,40 @@ export default function TrunksPage() {
             )}
           />
 
-          <FormField
-            control={formInstance.control}
-            name="registerEnabled"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <FormLabel>{dictionary.trunks.fields.registerEnabled}</FormLabel>
-                  <FormDescription>{dictionary.trunks.placeholders.registerEnabledHint}</FormDescription>
-                </div>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          {authMethod === 'userpass' && (
+            <>
+              <FormField
+                control={formInstance.control}
+                name="registerEnabled"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>{dictionary.trunks.fields.registerEnabled}</FormLabel>
+                      <FormDescription>{dictionary.trunks.placeholders.registerEnabledHint}</FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-          {registerEnabled && (
-            <FormField
-              control={formInstance.control}
-              name="registerInterval"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{dictionary.trunks.fields.registerInterval}</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="120" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              {registerEnabled && (
+                <FormField
+                  control={formInstance.control}
+                  name="registerInterval"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{dictionary.trunks.fields.registerInterval}</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="120" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            />
+            </>
           )}
         </>
       ) : (
@@ -651,6 +721,38 @@ export default function TrunksPage() {
               </FormItem>
             )}
           />
+
+          {authMethod === 'userpass' && (
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={formInstance.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{dictionary.trunks.fields.username}</FormLabel>
+                    <FormControl>
+                      <Input placeholder={dictionary.trunks.placeholders.username} autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={formInstance.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{dictionary.trunks.fields.password}</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder={dictionary.trunks.placeholders.password} autoComplete="new-password" {...field} />
+                    </FormControl>
+                    <FormDescription>{dictionary.trunks.placeholders.passwordHint}</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
         </>
       )}
 
@@ -752,7 +854,7 @@ export default function TrunksPage() {
               </DialogHeader>
               <Form {...form}>
                 <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-                  {renderFormFields(form, watchDirection, watchRegisterEnabled)}
+                  {renderFormFields(form, watchDirection, watchAuthMethod, watchRegisterEnabled)}
                   <DialogFooter>
                     <Button type="submit" disabled={submitting || isReadOnly}>
                       {submitting ? dictionary.trunks.buttons.creating : dictionary.trunks.buttons.create}
@@ -786,7 +888,7 @@ export default function TrunksPage() {
                     <TableHead>{dictionary.trunks.table.hostOrDid}</TableHead>
                     <TableHead>{dictionary.trunks.table.agent}</TableHead>
                     <TableHead>{dictionary.trunks.table.transport}</TableHead>
-                    <TableHead>{dictionary.trunks.table.password}</TableHead>
+                    <TableHead>Auth</TableHead>
                     <TableHead className="text-right">{dictionary.trunks.table.actions}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -822,32 +924,38 @@ export default function TrunksPage() {
                         </code>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <code className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
-                            {visiblePasswords[trunk.id] ? trunk.password : '••••••••'}
-                          </code>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              setVisiblePasswords((prev) => ({
-                                ...prev,
-                                [trunk.id]: !prev[trunk.id],
-                              }))
-                            }
-                            aria-label={
-                              visiblePasswords[trunk.id]
-                                ? dictionary.trunks.buttons.hidePassword
-                                : dictionary.trunks.buttons.showPassword
-                            }
-                          >
-                            {visiblePasswords[trunk.id] ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
+                        {trunk.authMethod === 'ip' ? (
+                          <Badge variant="outline" className="text-xs">
+                            Direct IP
+                          </Badge>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <code className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
+                              {visiblePasswords[trunk.id] ? trunk.password || '-' : '••••••••'}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                setVisiblePasswords((prev) => ({
+                                  ...prev,
+                                  [trunk.id]: !prev[trunk.id],
+                                }))
+                              }
+                              aria-label={
+                                visiblePasswords[trunk.id]
+                                  ? dictionary.trunks.buttons.hidePassword
+                                  : dictionary.trunks.buttons.showPassword
+                              }
+                            >
+                              {visiblePasswords[trunk.id] ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
@@ -903,7 +1011,7 @@ export default function TrunksPage() {
           </DialogHeader>
           <Form {...editForm}>
             <form className="space-y-4" onSubmit={editForm.handleSubmit(handleUpdate)}>
-              {renderFormFields(editForm, editWatchDirection, editWatchRegisterEnabled)}
+              {renderFormFields(editForm, editWatchDirection, editWatchAuthMethod, editWatchRegisterEnabled)}
               <DialogFooter>
                 <Button type="submit" disabled={updating || isReadOnly}>
                   {updating ? dictionary.trunks.buttons.updating : dictionary.trunks.buttons.update}

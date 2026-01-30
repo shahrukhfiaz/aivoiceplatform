@@ -399,6 +399,7 @@ export class AsteriskService {
 
   private buildInboundTrunkBlock(trunk: Trunk): string {
     const codecs = this.normalizeCodecs(trunk.codecs);
+    const authMethod = trunk.authMethod || 'userpass';
     const allowedIps = trunk.allowedIps?.split(',').map(ip => ip.trim()).filter(Boolean) || [];
 
     const sections: string[] = [];
@@ -411,14 +412,27 @@ export class AsteriskService {
       `context=${process.env.TENANT || 'demo'}`,
       'disallow=all',
       `allow=${codecs}`,
+      // Only add auth reference for userpass authentication
+      authMethod === 'userpass' ? `auth=${trunk.id}` : null,
       `aors=${trunk.id}`,
       'direct_media=no',
       'trust_id_inbound=yes',
       'send_pai=yes',
       'send_rpid=yes',
-    ];
+    ].filter(Boolean) as string[];
 
     sections.push(endpointLines.join('\n'));
+
+    // Auth section - only for userpass authentication
+    if (authMethod === 'userpass' && trunk.username && trunk.password) {
+      sections.push([
+        `[${trunk.id}]`,
+        'type=auth',
+        'auth_type=userpass',
+        `username=${trunk.username}`,
+        `password=${trunk.password}`,
+      ].join('\n'));
+    }
 
     // AOR section
     sections.push([
@@ -428,15 +442,19 @@ export class AsteriskService {
       'qualify_frequency=60',
     ].join('\n'));
 
-    // Identify section for IP-based matching
-    if (allowedIps.length > 0) {
-      const identifyLines = [
-        `[${trunk.id}]`,
-        'type=identify',
-        `endpoint=${trunk.id}`,
-        ...allowedIps.map(ip => `match=${ip}`),
-      ];
-      sections.push(identifyLines.join('\n'));
+    // Identify section for IP-based matching (required for IP auth, optional for userpass)
+    if (authMethod === 'ip' || allowedIps.length > 0) {
+      // For IP auth, use host if no allowedIps specified
+      const ipsToMatch = allowedIps.length > 0 ? allowedIps : (trunk.host ? [trunk.host] : []);
+      if (ipsToMatch.length > 0) {
+        const identifyLines = [
+          `[${trunk.id}]`,
+          'type=identify',
+          `endpoint=${trunk.id}`,
+          ...ipsToMatch.map(ip => `match=${ip}`),
+        ];
+        sections.push(identifyLines.join('\n'));
+      }
     }
 
     return sections.join('\n\n');
@@ -506,6 +524,7 @@ export class AsteriskService {
 
   private buildOutboundTrunkBlock(trunk: Trunk): string {
     const codecs = this.normalizeCodecs(trunk.codecs);
+    const authMethod = trunk.authMethod || 'userpass';
 
     if (!trunk.host) {
       throw new Error('Outbound trunk must have a host configured');
@@ -521,7 +540,8 @@ export class AsteriskService {
       `context=${process.env.TENANT || 'demo'}`,
       'disallow=all',
       `allow=${codecs}`,
-      `outbound_auth=${trunk.id}`,
+      // Only add outbound_auth for userpass authentication
+      authMethod === 'userpass' ? `outbound_auth=${trunk.id}` : null,
       `aors=${trunk.id}`,
       'direct_media=no',
       // NAT traversal options
@@ -537,14 +557,16 @@ export class AsteriskService {
 
     sections.push(endpointLines.join('\n'));
 
-    // Auth section
-    sections.push([
-      `[${trunk.id}]`,
-      'type=auth',
-      'auth_type=userpass',
-      `username=${trunk.username || trunk.id}`,
-      `password=${trunk.password}`,
-    ].join('\n'));
+    // Auth section - only for userpass authentication
+    if (authMethod === 'userpass') {
+      sections.push([
+        `[${trunk.id}]`,
+        'type=auth',
+        'auth_type=userpass',
+        `username=${trunk.username || trunk.id}`,
+        `password=${trunk.password}`,
+      ].join('\n'));
+    }
 
     // AOR section - static contact for outbound trunks
     const aorLines = [
@@ -556,8 +578,19 @@ export class AsteriskService {
     ];
     sections.push(aorLines.join('\n'));
 
-    // Registration section (if enabled)
-    if (trunk.registerEnabled) {
+    // For IP-based auth, add identify section to match the remote host
+    if (authMethod === 'ip') {
+      const identifyLines = [
+        `[${trunk.id}]`,
+        'type=identify',
+        `endpoint=${trunk.id}`,
+        `match=${trunk.host}`,
+      ];
+      sections.push(identifyLines.join('\n'));
+    }
+
+    // Registration section (if enabled) - only for userpass auth
+    if (trunk.registerEnabled && authMethod === 'userpass') {
       sections.push([
         `[${trunk.id}]`,
         'type=registration',

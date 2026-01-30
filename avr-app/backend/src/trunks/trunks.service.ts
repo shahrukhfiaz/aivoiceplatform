@@ -39,8 +39,14 @@ export class TrunksService {
       throw new ConflictException('Trunk name already exists');
     }
 
-    // Generate password if not provided
-    const password = dto.password || randomBytes(12).toString('base64url');
+    // Determine auth method (default to 'userpass')
+    const authMethod = dto.authMethod ?? 'userpass';
+
+    // For IP-based auth, password is not needed
+    // For userpass auth, generate password if not provided
+    const password = authMethod === 'ip'
+      ? null
+      : (dto.password || randomBytes(12).toString('base64url'));
 
     const transport = dto.transport ?? 'udp';
     const codecs = this.normalizeCodecs(dto.codecs);
@@ -66,6 +72,7 @@ export class TrunksService {
       name,
       direction,
       providerType: dto.providerType ?? 'generic',
+      authMethod,
       host: dto.host,
       port: dto.port ?? 5060,
       username: dto.username,
@@ -161,6 +168,14 @@ export class TrunksService {
       trunk.providerType = dto.providerType;
     }
 
+    if (dto.authMethod !== undefined) {
+      trunk.authMethod = dto.authMethod;
+      // If switching to IP auth, clear password
+      if (dto.authMethod === 'ip') {
+        trunk.password = null;
+      }
+    }
+
     // Validate direction-specific requirements
     const effectiveDirection = dto.direction ?? trunk.direction;
     const effectiveHost = dto.host !== undefined ? dto.host : trunk.host;
@@ -180,7 +195,8 @@ export class TrunksService {
       trunk.username = dto.username;
     }
 
-    if (dto.password !== undefined && dto.password) {
+    // Only allow password changes for userpass auth method
+    if (dto.password !== undefined && dto.password && trunk.authMethod === 'userpass') {
       trunk.password = dto.password;
     }
 
