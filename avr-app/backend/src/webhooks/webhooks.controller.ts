@@ -36,7 +36,7 @@ export class WebhooksController {
   async handleWebhook(
     @Body() event: WebhookEventDto,
     @Headers('x-avr-webhook-secret') secret: string,
-    @Headers('x-dsai-agent-id') agentId: string | undefined,
+    @Headers('x-avr-agent-id') agentId: string | undefined,
   ) {
     this.webhooksService.verifySecret(secret);
     await this.forwardWebhook(event, agentId);
@@ -296,7 +296,7 @@ export class WebhooksController {
         headers: {
           'content-type': 'application/json',
           'x-dsai-webhook-secret': secret,
-          ...(agentId ? { 'x-dsai-agent-id': agentId } : {}),
+          ...(agentId ? { 'x-avr-agent-id': agentId } : {}),
         },
         body: JSON.stringify(event),
       });
