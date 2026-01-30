@@ -129,6 +129,77 @@ export class AsteriskService {
     await this.reloadModule('res_pjsip.so');
   }
 
+  /**
+   * Provision or update the outbound agent dialplan context.
+   * This context handles calls that are originated via AMI for agent-initiated outbound calls.
+   * When the call is answered, it connects to the agent's AudioSocket.
+   */
+  async provisionOutboundAgentContext(agent: {
+    id: string;
+    name: string;
+    httpPort: number;
+    port: number;
+  }, trunk: {
+    id: string;
+    name: string;
+    recordingEnabled?: boolean;
+    denoiseEnabled?: boolean;
+  }): Promise<void> {
+    const dialplan = this.buildOutboundAgentDialplan(agent, trunk);
+    await this.upsertBlock(
+      this.extensionsPath,
+      `outbound-agent-${agent.id}`,
+      dialplan,
+    );
+    await this.reloadModule('pbx_config.so');
+  }
+
+  /**
+   * Build dialplan for outbound agent calls.
+   * This is the context that AMI originate connects to when the call is answered.
+   */
+  private buildOutboundAgentDialplan(agent: {
+    id: string;
+    name: string;
+    httpPort: number;
+    port: number;
+  }, trunk: {
+    id: string;
+    name: string;
+    recordingEnabled?: boolean;
+    denoiseEnabled?: boolean;
+  }): string {
+    const tenant = process.env.TENANT || 'demo';
+    const contextName = `avr-outbound-${agent.id}`;
+
+    // This extension is called when the outbound call is answered
+    // The UUID is passed via channel variable from the originate call
+    const lines = [
+      `[${contextName}]`,
+      `exten => s,1,NoOp(Outbound call via agent ${agent.name} - trunk ${trunk.name})`,
+      ' same => n,Answer()',
+      // Notify the agent's core container about the call
+      ` same => n,Set(JSON_BODY={"uuid":"\${AVR_UUID}","payload":{"from":"\${CALLERID(num)}","to":"\${AVR_TO_NUMBER}","direction":"outbound","trunkId":"${trunk.id}","trunkName":"${trunk.name}","agentId":"${agent.id}"}})`,
+      ' same => n,Set(CURLOPT(httpheader)=Content-Type: application/json)',
+      ' same => n,Set(CURLOPT(conntimeout)=5)',
+      ` same => n,Set(JSON_RESPONSE=\${CURL(http://dsai-core-${agent.id}:${agent.httpPort}/call,\${JSON_BODY})})`,
+    ];
+
+    if (trunk.recordingEnabled) {
+      lines.push(` same => n,MixMonitor(/var/spool/asterisk/monitor/${tenant}/\${AVR_UUID}.wav)`);
+    }
+    if (trunk.denoiseEnabled !== false) {
+      lines.push(' same => n,Set(DENOISE(rx)=on)');
+    }
+
+    lines.push(
+      ` same => n,Dial(AudioSocket/dsai-core-${agent.id}:${agent.port}/\${AVR_UUID})`,
+      ' same => n,Hangup()',
+    );
+
+    return lines.join('\n');
+  }
+
   async removePhone(phoneId: string): Promise<void> {
     await this.removeBlock(this.pjsipPath, `phone-${phoneId}`);
     await this.reloadModule('res_pjsip.so');

@@ -478,13 +478,12 @@ export class AgentsService {
       metadata: dto.metadata,
     });
 
-    // 5. Send dial request to agent container
+    // 5. Send dial request via AMI originate
     try {
-      await this.initiateCallViaAgent(agent, {
+      await this.initiateCallViaAgent(agent, trunk, {
         uuid,
         toNumber: dto.toNumber,
         fromNumber,
-        trunkId: trunk.id,
         timeout: dto.timeout || 60,
         metadata: dto.metadata,
       });
@@ -513,27 +512,63 @@ export class AgentsService {
 
   private async initiateCallViaAgent(
     agent: Agent,
+    trunk: Trunk,
     params: {
       uuid: string;
       toNumber: string;
       fromNumber: string;
-      trunkId: string;
       timeout: number;
       metadata?: Record<string, unknown>;
     },
   ): Promise<void> {
-    const coreContainerName = `dsai-core-${agent.id}`;
-    const url = `http://${coreContainerName}:${agent.httpPort}/dial`;
+    // First, ensure the outbound agent dialplan context exists
+    await this.asteriskService.provisionOutboundAgentContext(
+      {
+        id: agent.id,
+        name: agent.name,
+        httpPort: agent.httpPort,
+        port: agent.port,
+      },
+      {
+        id: trunk.id,
+        name: trunk.name,
+        recordingEnabled: trunk.recordingEnabled,
+        denoiseEnabled: trunk.denoiseEnabled,
+      },
+    );
 
-    const response = await fetch(url, {
+    // Build the channel string for the trunk
+    // Format: PJSIP/{to_number}@{trunk_id}
+    const channel = `PJSIP/${params.toNumber}@${trunk.id}`;
+
+    // The context to connect to when the call is answered
+    const context = `avr-outbound-${agent.id}`;
+
+    // Use avr-ami's /originate endpoint to initiate the call via Asterisk AMI
+    const amiUrl = process.env.AMI_SERVICE_URL || 'http://avr-ami:6006';
+
+    const response = await fetch(`${amiUrl}/originate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      body: JSON.stringify({
+        channel,
+        exten: 's',
+        context,
+        priority: 1,
+        callerid: params.fromNumber ? `"${agent.name}" <${params.fromNumber}>` : `"${agent.name}" <avr>`,
+        // Pass variables to the dialplan
+        variable: {
+          AVR_UUID: params.uuid,
+          AVR_TO_NUMBER: params.toNumber,
+          AVR_AGENT_ID: agent.id,
+        },
+        timeout: (params.timeout || 60) * 1000, // Convert to milliseconds
+      }),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`Agent returned ${response.status}: ${error}`);
+      throw new Error(`AMI originate failed: ${response.status}: ${error}`);
     }
   }
 
