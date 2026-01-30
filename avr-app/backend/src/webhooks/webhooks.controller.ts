@@ -31,7 +31,7 @@ export class WebhooksController {
   @Post()
   async handleWebhook(
     @Body() event: WebhookEventDto,
-    @Headers('x-dsai-webhook-secret') secret: string,
+    @Headers('x-avr-webhook-secret') secret: string,
     @Headers('x-dsai-agent-id') agentId: string | undefined,
   ) {
     this.webhooksService.verifySecret(secret);

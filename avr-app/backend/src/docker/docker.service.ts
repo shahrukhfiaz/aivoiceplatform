@@ -127,9 +127,11 @@ export class DockerService {
     const details = await container.inspect();
     if (details.State.Running) {
       await container.stop();
-      await container.remove();
       this.logger.debug(`Stopped container ${name}`);
     }
+    // Always remove the container (whether it was running or already stopped)
+    await container.remove();
+    this.logger.debug(`Removed container ${name}`);
   }
 
   async listContainers(agentId: string): Promise<any[]> {

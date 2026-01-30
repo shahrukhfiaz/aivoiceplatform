@@ -78,7 +78,7 @@ export class TwilioService {
       authTokenEncrypted,
       smsEnabled: dto.smsEnabled ?? false,
       callsEnabled: dto.callsEnabled ?? true,
-      recordingEnabled: dto.recordingEnabled ?? false,
+      recordingEnabled: dto.recordingEnabled ?? true,  // Default to true for call recordings
       denoiseEnabled: dto.denoiseEnabled ?? true,
       agent,
       agentId: dto.agentId,

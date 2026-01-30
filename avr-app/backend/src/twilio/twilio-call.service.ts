@@ -280,6 +280,7 @@ export class TwilioCallService {
     const mediaStreamUrl = `${publicUrl.replace('http', 'ws').replace('https', 'wss')}/twilio/media-stream`;
 
     // Generate TwiML with Media Streams
+    // Recording is handled by the Media Stream Gateway if recordingEnabled is true
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Connect>
@@ -289,6 +290,7 @@ export class TwilioCallService {
       <Parameter name="agentPort" value="${agent.port}" />
       <Parameter name="stsPort" value="${stsPort}" />
       <Parameter name="twilioNumberId" value="${twilioNumber.id}" />
+      <Parameter name="recordingEnabled" value="${twilioNumber.recordingEnabled}" />
     </Stream>
   </Connect>
 </Response>`;

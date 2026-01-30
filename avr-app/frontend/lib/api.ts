@@ -71,6 +71,9 @@ export async function apiFetch<T>(endpoint: string, init: ApiFetchOptions = {}):
     });
   }
 
+  // Add cache-busting timestamp to prevent intermediate proxy caching
+  url.searchParams.set('_t', Date.now().toString());
+
   const { paginated, ...fetchInit } = init;
 
   const response = await fetch(url.toString(), {

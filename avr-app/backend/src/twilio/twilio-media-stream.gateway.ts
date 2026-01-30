@@ -6,6 +6,166 @@ import WebSocket, { WebSocketServer } from 'ws';
 import { TwilioNumber } from './twilio-number.entity';
 import { Agent, AgentStatus } from '../agents/agent.entity';
 import { WebhooksService } from '../webhooks/webhooks.service';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+/**
+ * Audio recorder for Twilio calls
+ * Captures both channels and writes to WAV file
+ */
+class TwilioCallRecorder {
+  private readonly logger = new Logger(TwilioCallRecorder.name);
+  private inboundChunks: Buffer[] = [];  // Audio from caller (mulaw from Twilio)
+  private outboundChunks: Buffer[] = [];  // Audio from agent (linear16 from STS)
+  private isRecording = false;
+  private readonly callUuid: string;
+  private readonly sampleRate = 8000;  // Twilio uses 8kHz
+
+  constructor(callUuid: string) {
+    this.callUuid = callUuid;
+  }
+
+  start() {
+    this.isRecording = true;
+    this.logger.log(`Started recording for call ${this.callUuid}`);
+  }
+
+  addInboundAudio(mulawBuffer: Buffer) {
+    if (this.isRecording) {
+      // Convert mulaw to linear16 for recording
+      const linearBuffer = this.mulawToLinear16(mulawBuffer);
+      this.inboundChunks.push(linearBuffer);
+    }
+  }
+
+  addOutboundAudio(linearBuffer: Buffer) {
+    if (this.isRecording) {
+      // Downsample from 16kHz to 8kHz if needed (STS may use 16kHz)
+      // For simplicity, we'll store as-is and let the final mix handle it
+      this.outboundChunks.push(linearBuffer);
+    }
+  }
+
+  async stop(): Promise<string | null> {
+    this.isRecording = false;
+    this.logger.log(`Stopping recording for call ${this.callUuid}`);
+
+    try {
+      // Combine all chunks
+      const inboundAudio = Buffer.concat(this.inboundChunks);
+      const outboundAudio = Buffer.concat(this.outboundChunks);
+
+      if (inboundAudio.length === 0 && outboundAudio.length === 0) {
+        this.logger.warn(`No audio recorded for call ${this.callUuid}`);
+        return null;
+      }
+
+      // Mix the two channels into mono WAV
+      const mixedAudio = this.mixChannels(inboundAudio, outboundAudio);
+      const wavData = this.createWavFile(mixedAudio, this.sampleRate, 1, 16);
+
+      // Save to the same location Asterisk uses
+      const filePath = await this.saveRecording(wavData);
+      this.logger.log(`Saved recording to ${filePath}`);
+
+      return filePath;
+    } catch (error) {
+      this.logger.error(`Failed to save recording: ${error}`);
+      return null;
+    }
+  }
+
+  private mixChannels(channel1: Buffer, channel2: Buffer): Buffer {
+    // Make channels the same length by padding with silence
+    const maxLength = Math.max(channel1.length, channel2.length);
+    const ch1 = Buffer.alloc(maxLength);
+    const ch2 = Buffer.alloc(maxLength);
+    channel1.copy(ch1);
+    channel2.copy(ch2);
+
+    // Mix the two channels (average)
+    const mixed = Buffer.alloc(maxLength);
+    for (let i = 0; i < maxLength; i += 2) {
+      if (i + 1 < maxLength) {
+        const sample1 = ch1.readInt16LE(i);
+        const sample2 = ch2.readInt16LE(i);
+        // Mix by averaging (prevents clipping)
+        const mixedSample = Math.round((sample1 + sample2) / 2);
+        mixed.writeInt16LE(Math.max(-32768, Math.min(32767, mixedSample)), i);
+      }
+    }
+
+    return mixed;
+  }
+
+  private createWavFile(audioData: Buffer, sampleRate: number, numChannels: number, bitsPerSample: number): Buffer {
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    const blockAlign = numChannels * (bitsPerSample / 8);
+    const dataSize = audioData.length;
+    const fileSize = 36 + dataSize;
+
+    const header = Buffer.alloc(44);
+
+    // RIFF header
+    header.write('RIFF', 0);
+    header.writeUInt32LE(fileSize, 4);
+    header.write('WAVE', 8);
+
+    // fmt subchunk
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16);  // Subchunk1Size (16 for PCM)
+    header.writeUInt16LE(1, 20);   // AudioFormat (1 for PCM)
+    header.writeUInt16LE(numChannels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE(byteRate, 28);
+    header.writeUInt16LE(blockAlign, 32);
+    header.writeUInt16LE(bitsPerSample, 34);
+
+    // data subchunk
+    header.write('data', 36);
+    header.writeUInt32LE(dataSize, 40);
+
+    return Buffer.concat([header, audioData]);
+  }
+
+  private async saveRecording(wavData: Buffer): Promise<string> {
+    const tenant = process.env.TENANT || 'demo';
+    const monitorPath = process.env.ASTERISK_MONITOR_PATH || '../recordings';
+    const basePath = path.isAbsolute(monitorPath)
+      ? monitorPath
+      : path.resolve(process.cwd(), monitorPath);
+    const tenantPath = path.join(basePath, tenant);
+
+    // Ensure directory exists
+    await fs.mkdir(tenantPath, { recursive: true });
+
+    const filePath = path.join(tenantPath, `${this.callUuid}.wav`);
+    await fs.writeFile(filePath, wavData);
+
+    return filePath;
+  }
+
+  private mulawToLinear16(mulawBuffer: Buffer): Buffer {
+    const linearBuffer = Buffer.alloc(mulawBuffer.length * 2);
+    for (let i = 0; i < mulawBuffer.length; i++) {
+      const mulaw = mulawBuffer[i];
+      const linear = this.mulawDecode(mulaw);
+      linearBuffer.writeInt16LE(linear, i * 2);
+    }
+    return linearBuffer;
+  }
+
+  private mulawDecode(mulaw: number): number {
+    const MULAW_BIAS = 33;
+    mulaw = ~mulaw;
+    const sign = (mulaw & 0x80) ? -1 : 1;
+    const exponent = (mulaw >> 4) & 0x07;
+    const mantissa = mulaw & 0x0F;
+    let linear = ((mantissa << 3) + MULAW_BIAS) << exponent;
+    linear -= MULAW_BIAS;
+    return sign * linear;
+  }
+}
 
 /**
  * Twilio Media Stream Gateway
@@ -78,6 +238,8 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
     let agentPort: number | null = null;
     let callUuid: string | null = null;
     let isInitialized = false;
+    let recorder: TwilioCallRecorder | null = null;
+    let recordingEnabled = false;
 
     // Handle messages from Twilio
     twilioWs.on('message', async (data) => {
@@ -100,8 +262,15 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
             agentPort = customParams.agentPort ? parseInt(customParams.agentPort) : null;
             const stsPort = customParams.stsPort ? parseInt(customParams.stsPort) : 6678;
             callUuid = customParams.callUuid;
+            recordingEnabled = customParams.recordingEnabled === 'true';
 
-            this.logger.log(`Stream started: ${streamSid}, Call: ${callSid}, Agent: ${agentId}, STS Port: ${stsPort}`);
+            this.logger.log(`Stream started: ${streamSid}, Call: ${callSid}, Agent: ${agentId}, STS Port: ${stsPort}, Recording: ${recordingEnabled}`);
+
+            // Initialize recorder if enabled
+            if (recordingEnabled && callUuid) {
+              recorder = new TwilioCallRecorder(callUuid);
+              recorder.start();
+            }
 
             // Connect to the STS container
             if (agentId) {
@@ -109,7 +278,25 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
 
               if (stsWs) {
                 isInitialized = true;
-                this.setupSTSHandlers(stsWs, twilioWs, streamSid, callUuid);
+                this.setupSTSHandlers(stsWs, twilioWs, streamSid, callUuid, recorder);
+
+                // Send call_started event now that the call is connected to STS
+                if (callUuid) {
+                  this.webhooksService
+                    .handleEvent({
+                      uuid: callUuid,
+                      type: 'call_started',
+                      timestamp: new Date().toISOString(),
+                      payload: {
+                        source: 'twilio',
+                        twilioCallSid: callSid,
+                        streamSid: streamSid,
+                      },
+                    })
+                    .catch((err) =>
+                      this.logger.error(`Failed to send call_started: ${err.message}`),
+                    );
+                }
               } else {
                 this.logger.error('Failed to connect to STS container');
                 twilioWs.close();
@@ -129,6 +316,11 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
                 const mulawBuffer = Buffer.from(audioPayload, 'base64');
                 const linearBuffer = this.mulawToLinear16(mulawBuffer);
 
+                // Record inbound audio (from caller)
+                if (recorder) {
+                  recorder.addInboundAudio(mulawBuffer);
+                }
+
                 stsWs.send(JSON.stringify({
                   type: 'audio',
                   audio: linearBuffer.toString('base64'),
@@ -139,6 +331,29 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
 
           case 'stop':
             this.logger.log('Twilio Media Stream stopped');
+            // Send call_ended event
+            if (callUuid) {
+              this.webhooksService
+                .handleEvent({
+                  uuid: callUuid,
+                  type: 'call_ended',
+                  timestamp: new Date().toISOString(),
+                  payload: {
+                    source: 'twilio',
+                    twilioCallSid: callSid,
+                    reason: 'completed',
+                  },
+                })
+                .catch((err) =>
+                  this.logger.error(`Failed to send call_ended: ${err.message}`),
+                );
+            }
+            // Stop recording and save
+            if (recorder) {
+              recorder.stop().catch((err) =>
+                this.logger.error(`Failed to save recording: ${err}`),
+              );
+            }
             if (stsWs) {
               stsWs.close();
             }
@@ -159,6 +374,12 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
 
     twilioWs.on('close', () => {
       this.logger.log('Twilio WebSocket closed');
+      // Stop recording and save
+      if (recorder) {
+        recorder.stop().catch((err) =>
+          this.logger.error(`Failed to save recording: ${err}`),
+        );
+      }
       if (stsWs) {
         stsWs.close();
       }
@@ -227,7 +448,13 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
   /**
    * Set up handlers for STS WebSocket messages
    */
-  private setupSTSHandlers(stsWs: WebSocket, twilioWs: WebSocket, streamSid: string | null, callUuid: string | null) {
+  private setupSTSHandlers(
+    stsWs: WebSocket,
+    twilioWs: WebSocket,
+    streamSid: string | null,
+    callUuid: string | null,
+    recorder: TwilioCallRecorder | null,
+  ) {
     stsWs.on('message', (data) => {
       try {
         const message = JSON.parse(data.toString());
@@ -239,6 +466,11 @@ export class TwilioMediaStreamGateway implements OnModuleInit, OnModuleDestroy {
               // Convert linear16 to mulaw for Twilio
               const linearBuffer = Buffer.from(message.audio, 'base64');
               const mulawBuffer = this.linear16ToMulaw(linearBuffer);
+
+              // Record outbound audio (from agent)
+              if (recorder) {
+                recorder.addOutboundAudio(linearBuffer);
+              }
 
               twilioWs.send(JSON.stringify({
                 event: 'media',

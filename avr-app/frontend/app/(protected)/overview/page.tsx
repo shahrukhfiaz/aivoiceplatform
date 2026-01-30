@@ -16,6 +16,11 @@ import {
   AreaChart as AreaChartIcon
 } from 'lucide-react';
 import { apiFetch, type PaginatedResponse } from '@/lib/api';
+import { useAutoRefresh } from '@/hooks/use-auto-refresh';
+
+// Force dynamic rendering - no caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
@@ -96,7 +101,6 @@ export default function DashboardPage() {
   const [granularity, setGranularity] = useState<Granularity>('month');
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadAgents = useCallback(async () => {
     try {
@@ -174,25 +178,20 @@ export default function DashboardPage() {
     void fetchCallData();
   }, [fetchCallData]);
 
-  // Auto-refresh effect
-  useEffect(() => {
-    if (autoRefresh) {
-      intervalRef.current = setInterval(() => {
-        void fetchCallData();
-        void loadAgents();
-      }, AUTO_REFRESH_INTERVAL);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [autoRefresh, fetchCallData, loadAgents]);
+  // Combined refresh function for both agents and call data
+  const refreshAll = useCallback(() => {
+    void fetchCallData();
+    void loadAgents();
+  }, [fetchCallData, loadAgents]);
+
+  // Auto-refresh using hook - handles interval, focus, and visibility
+  useAutoRefresh({
+    refreshFn: refreshAll,
+    intervalMs: AUTO_REFRESH_INTERVAL,
+    refreshOnFocus: true,
+    refreshOnVisibility: true,
+    enabled: autoRefresh,
+  });
 
   // Calculate trend percentage
   const calculateTrend = (current: number, previous: number | undefined): { value: number; isPositive: boolean } | null => {

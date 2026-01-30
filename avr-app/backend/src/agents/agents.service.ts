@@ -228,11 +228,11 @@ export class AgentsService {
     }
     const env = this.buildEnv(agent, runAgentDto.env ?? []);
 
-    // Build webhook URL - use Docker gateway IP on Linux since host.docker.internal doesn't work
+    // Build webhook URL - use container name for Docker internal networking
     let webhookUrl = process.env.WEBHOOK_URL;
     if (!webhookUrl || webhookUrl.includes('host.docker.internal')) {
-      // Default to Docker gateway IP (works on Linux)
-      webhookUrl = 'http://172.20.0.1:3001/webhooks';
+      // Default to container name (avr-backend) for reliable Docker internal networking
+      webhookUrl = 'http://avr-backend:3001/webhooks';
     }
 
     const coreEnv = this.buildEnv(agent, [
@@ -285,7 +285,8 @@ export class AgentsService {
       coreEnv.push(`PORT=${agent.port}`);
       coreEnv.push(`HTTP_PORT=${agent.httpPort}`);
       // Add BACKEND_URL so core container can fetch provider URLs dynamically from database
-      const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL || 'http://172.20.0.1:3001';
+      // Use container name (avr-backend) for reliable Docker internal networking
+      const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL || 'http://avr-backend:3001';
       coreEnv.push(`BACKEND_URL=${backendUrl}`);
       coreEnv.push(`AGENT_ID=${agent.id}`);
       containerIds['core'] = await this.dockerService.runContainer(
@@ -383,7 +384,11 @@ export class AgentsService {
     const agent = await this.findOne(id);
     const names = this.getContainerNames(agent.id, agent.mode);
     for (const name of names) {
-      await this.dockerService.stopContainer(name);
+      try {
+        await this.dockerService.stopContainer(name);
+      } catch (error) {
+        this.logger.warn(`Failed to stop container ${name}: ${error.message}`);
+      }
     }
 
     agent.status = AgentStatus.STOPPED;
@@ -598,16 +603,15 @@ export class AgentsService {
     // PROVIDER_ID and BACKEND_URL enable containers to fetch config from API
     env.add(`PROVIDER_ID=${provider.id}`);
     // Determine backend URL for container-to-backend communication
-    // Containers need to reach the host backend - use Docker gateway IP
+    // Use container name (avr-backend) for reliable Docker internal networking
     let backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.BACKEND_URL;
     if (!backendUrl) {
-      // Default: use Docker gateway IP (172.20.0.1 for custom networks, 172.17.0.1 for default bridge)
-      // Containers can reach host via gateway IP
-      backendUrl = 'http://172.20.0.1:3001'; // Works for containers in Docker network
+      // Default: use container name for Docker internal networking
+      backendUrl = 'http://avr-backend:3001';
     }
-    // Replace host.docker.internal with gateway IP (doesn't work on Linux)
+    // Replace host.docker.internal with container name (host.docker.internal doesn't work on Linux)
     if (backendUrl.includes('host.docker.internal')) {
-      backendUrl = backendUrl.replace('host.docker.internal', '172.20.0.1');
+      backendUrl = backendUrl.replace('host.docker.internal', 'avr-backend');
     }
     env.add(`BACKEND_URL=${backendUrl}`);
 

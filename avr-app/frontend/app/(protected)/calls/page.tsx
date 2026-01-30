@@ -4,7 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpDown, Copy, Download, Eye, MessageSquare, Play, RefreshCcw } from 'lucide-react';
 import { apiFetch, ApiError, getApiUrl, getStoredToken, type PaginatedResponse } from '@/lib/api';
+import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { useI18n } from '@/lib/i18n';
+
+// Force dynamic rendering - no caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -246,6 +251,14 @@ export default function CallsPage() {
   useEffect(() => {
     loadCalls();
   }, [loadCalls]);
+
+  // Auto-refresh calls every 15 seconds, on focus, and on visibility change
+  useAutoRefresh({
+    refreshFn: loadCalls,
+    intervalMs: 15000,
+    refreshOnFocus: true,
+    refreshOnVisibility: true,
+  });
 
   useEffect(() => {
     if (calls.length === 0) {

@@ -7,7 +7,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PlusCircle, Pencil, Trash2, Shield, Eye, EyeOff, Phone, MessageSquare, CheckCircle, XCircle, Loader2, Zap, Radio } from 'lucide-react';
 import { apiFetch, ApiError, type PaginatedResponse } from '@/lib/api';
+import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 import { useI18n, type Dictionary } from '@/lib/i18n';
+
+// Force dynamic rendering - no caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -199,6 +204,14 @@ export default function TwilioPage() {
     loadTwilioNumbers();
     loadAgents();
   }, [loadTwilioNumbers, loadAgents]);
+
+  // Auto-refresh twilio numbers every 30 seconds, on focus, and on visibility change
+  useAutoRefresh({
+    refreshFn: loadTwilioNumbers,
+    intervalMs: 30000,
+    refreshOnFocus: true,
+    refreshOnVisibility: true,
+  });
 
   const resetForms = () => {
     form.reset(defaultFormValues);
