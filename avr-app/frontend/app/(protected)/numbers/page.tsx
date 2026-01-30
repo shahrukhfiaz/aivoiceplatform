@@ -9,6 +9,7 @@ import { PlusCircle, Pencil, Trash2, Shield } from 'lucide-react';
 import { apiFetch, ApiError, type PaginatedResponse } from '@/lib/api';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
+import { useCallUpdates, type DataChangePayload } from '@/hooks/use-call-updates';
 import {
   Dialog,
   DialogContent,
@@ -286,6 +287,15 @@ export default function NumbersPage() {
     loadTrunks();
     loadNumbers();
   }, [loadAgents, loadNumbers, loadPhones, loadTrunks]);
+
+  // Subscribe to real-time number updates via SSE
+  useCallUpdates({
+    onDataChanged: useCallback((payload: DataChangePayload) => {
+      if (payload.entity === 'number') {
+        loadNumbers();
+      }
+    }, [loadNumbers]),
+  });
 
   const openEditDialog = (number: NumberDto) => {
     setError(null);

@@ -16,7 +16,7 @@ import {
   AreaChart as AreaChartIcon
 } from 'lucide-react';
 import { apiFetch, type PaginatedResponse } from '@/lib/api';
-import { useCallUpdates, type CallUpdatePayload } from '@/hooks/use-call-updates';
+import { useCallUpdates, type CallUpdatePayload, type AgentUpdatePayload } from '@/hooks/use-call-updates';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/lib/i18n';
@@ -142,6 +142,40 @@ export default function DashboardPage() {
         ...prev,
         activeCalls: Math.max(0, prev.activeCalls - 1),
       }));
+    }, []),
+
+    // Agent events - update running agents count
+    onAgentStarted: useCallback((payload: AgentUpdatePayload) => {
+      setRunningAgents(prev => prev + 1);
+      setAgents(prev => prev.map(agent =>
+        agent.id === payload.id ? { ...agent, status: 'running' } : agent
+      ));
+    }, []),
+
+    onAgentStopped: useCallback((payload: AgentUpdatePayload) => {
+      setRunningAgents(prev => Math.max(0, prev - 1));
+      setAgents(prev => prev.map(agent =>
+        agent.id === payload.id ? { ...agent, status: 'stopped' } : agent
+      ));
+    }, []),
+
+    onAgentCreated: useCallback((payload: AgentUpdatePayload) => {
+      // Add new agent to the list
+      setAgents(prev => [...prev, { id: payload.id, name: payload.name, status: payload.status }]);
+      if (payload.status === 'running') {
+        setRunningAgents(prev => prev + 1);
+      }
+    }, []),
+
+    onAgentDeleted: useCallback((payload: AgentUpdatePayload) => {
+      // Remove agent from the list
+      setAgents(prev => {
+        const agent = prev.find(a => a.id === payload.id);
+        if (agent?.status === 'running') {
+          setRunningAgents(r => Math.max(0, r - 1));
+        }
+        return prev.filter(a => a.id !== payload.id);
+      });
     }, []),
 
     onError: useCallback((err: Error) => {

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RolesGuard } from '../auth/roles.guard';
 import { AsteriskModule } from '../asterisk/asterisk.module';
@@ -8,11 +8,13 @@ import { Trunk } from '../trunks/trunk.entity';
 import { PhoneNumber } from './number.entity';
 import { NumbersController } from './numbers.controller';
 import { NumbersService } from './numbers.service';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([PhoneNumber, Agent, Phone, Trunk]),
     AsteriskModule,
+    forwardRef(() => WebhooksModule),
   ],
   controllers: [NumbersController],
   providers: [NumbersService, RolesGuard],

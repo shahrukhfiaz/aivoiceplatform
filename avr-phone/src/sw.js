@@ -1,4 +1,4 @@
-const cacheID = "v0";
+const cacheID = "v1";
 const CacheItems = [
     "index.html",   // Special page: Loads from network
     "offline.html",   // Special page: Save to cache, but return only when offline
@@ -73,10 +73,30 @@ self.addEventListener('install', function(event){
 
 self.addEventListener('activate', function(event){
     console.log("Service Worker: Activate");
-    event.waitUntil(clients.claim());
+    // Clear old caches when new service worker activates
+    event.waitUntil(
+        caches.keys().then(function(cacheNames) {
+            return Promise.all(
+                cacheNames.filter(function(cacheName) {
+                    return cacheName !== cacheID;
+                }).map(function(cacheName) {
+                    console.log("Service Worker: Clearing old cache:", cacheName);
+                    return caches.delete(cacheName);
+                })
+            );
+        }).then(function() {
+            return clients.claim();
+        })
+    );
 });
 
 self.addEventListener("fetch", function(event){
+    // Skip non-cacheable requests (non-GET, non-http/https)
+    const url = new URL(event.request.url);
+    if (event.request.method !== 'GET' || (url.protocol !== 'http:' && url.protocol !== 'https:')) {
+        return; // Let the browser handle it normally
+    }
+
     if(event.request.url.endsWith("index.html")){
         console.log("Special Home Page handling...", event.request.url);
         event.respondWith(loadHomePage(event.request));
@@ -128,6 +148,19 @@ const loadHomePage = async function(request) {
     }
 }
 const addToCache = async function(request, response) {
-    const cache = await caches.open(cacheID);
-    await cache.put(request, response);
+    // Only cache GET requests with http/https schemes
+    // Service Workers cannot cache POST requests or non-http schemes (like chrome-extension://)
+    if (request.method !== 'GET') {
+        return;
+    }
+    const url = new URL(request.url);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        return;
+    }
+    try {
+        const cache = await caches.open(cacheID);
+        await cache.put(request, response);
+    } catch (error) {
+        console.warn("Failed to cache:", request.url, error);
+    }
 }

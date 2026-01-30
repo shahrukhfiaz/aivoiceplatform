@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Agent } from '../agents/agent.entity';
 import { EncryptionService } from '../common/encryption.service';
+import { CallUpdatesGateway } from '../webhooks/call-updates.gateway';
 import {
   buildPaginatedResult,
   getPagination,
@@ -44,6 +45,7 @@ export class TwilioService {
     @InjectRepository(Agent)
     private readonly agentRepository: Repository<Agent>,
     private readonly encryptionService: EncryptionService,
+    private readonly callUpdatesGateway: CallUpdatesGateway,
   ) {}
 
   async create(dto: CreateTwilioNumberDto): Promise<TwilioNumberResponse> {
@@ -89,6 +91,8 @@ export class TwilioService {
 
     // Auto-configure Twilio webhook URLs
     await this.configureTwilioWebhooks(saved, dto.authToken);
+
+    this.callUpdatesGateway.notifyDataChanged('twilio_number', 'created', saved.id);
 
     return this.toResponse(saved);
   }
@@ -205,6 +209,8 @@ export class TwilioService {
     const authToken = dto.authToken || this.encryptionService.decrypt(saved.authTokenEncrypted);
     await this.configureTwilioWebhooks(saved, authToken);
 
+    this.callUpdatesGateway.notifyDataChanged('twilio_number', 'updated', saved.id);
+
     return this.toResponse(saved);
   }
 
@@ -212,6 +218,8 @@ export class TwilioService {
     const twilioNumber = await this.findOneEntity(id);
     await this.twilioNumberRepository.remove(twilioNumber);
     this.logger.log(`Removed Twilio number: ${twilioNumber.phoneNumber}`);
+
+    this.callUpdatesGateway.notifyDataChanged('twilio_number', 'deleted', id);
   }
 
   /**

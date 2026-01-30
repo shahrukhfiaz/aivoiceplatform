@@ -9,6 +9,7 @@ import { Play, Square, PlusCircle, Waves, Pencil, Trash2, Shield, Loader2, Copy,
 import { apiFetch, type PaginatedResponse } from '@/lib/api';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
+import { useCallUpdates, type AgentUpdatePayload } from '@/hooks/use-call-updates';
 import {
   Dialog,
   DialogContent,
@@ -342,6 +343,39 @@ export default function AgentsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Subscribe to real-time agent updates via SSE
+  useCallUpdates({
+    onAgentStarted: useCallback((payload: AgentUpdatePayload) => {
+      setAgents(prev => prev.map(agent =>
+        agent.id === payload.id
+          ? { ...agent, status: 'running' as const }
+          : agent
+      ));
+    }, []),
+    onAgentStopped: useCallback((payload: AgentUpdatePayload) => {
+      setAgents(prev => prev.map(agent =>
+        agent.id === payload.id
+          ? { ...agent, status: 'stopped' as const }
+          : agent
+      ));
+    }, []),
+    onAgentUpdated: useCallback((payload: AgentUpdatePayload) => {
+      setAgents(prev => prev.map(agent =>
+        agent.id === payload.id
+          ? { ...agent, name: payload.name, status: payload.status as 'running' | 'stopped' }
+          : agent
+      ));
+    }, []),
+    onAgentCreated: useCallback((payload: AgentUpdatePayload) => {
+      // Reload to get full agent data including providers
+      loadData();
+    }, [loadData]),
+    onAgentDeleted: useCallback((payload: AgentUpdatePayload) => {
+      setAgents(prev => prev.filter(agent => agent.id !== payload.id));
+      setPagination(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+    }, []),
+  });
 
   const toRequestBody = (values: AgentFormValues) => ({
     name: values.name,

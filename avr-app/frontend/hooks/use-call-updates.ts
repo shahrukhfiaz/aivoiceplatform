@@ -21,20 +21,73 @@ export interface CallUpdatePayload {
   hasRecording?: boolean;
 }
 
+export interface AgentUpdatePayload {
+  id: string;
+  name: string;
+  status: string;
+  mode?: string;
+}
+
+// Generic data change types
+export type DataEntityType = 'provider' | 'trunk' | 'number' | 'twilio_number' | 'recording' | 'phone';
+export type DataChangeAction = 'created' | 'updated' | 'deleted';
+
+export interface DataChangePayload {
+  entity: DataEntityType;
+  action: DataChangeAction;
+  id: string;
+}
+
+export type LiveUpdateEventType =
+  | 'connected'
+  | 'call_created'
+  | 'call_updated'
+  | 'call_ended'
+  | 'agent_started'
+  | 'agent_stopped'
+  | 'agent_updated'
+  | 'agent_created'
+  | 'agent_deleted'
+  | 'data_changed';
+
+export interface LiveUpdateEvent {
+  type: LiveUpdateEventType;
+  call?: CallUpdatePayload;
+  agent?: AgentUpdatePayload;
+  entity?: DataEntityType;
+  action?: DataChangeAction;
+  id?: string;
+  clientId?: string;
+}
+
+// Keep CallUpdateEvent for backward compatibility
 export interface CallUpdateEvent {
   type: 'connected' | 'call_created' | 'call_updated' | 'call_ended';
   call?: CallUpdatePayload;
   clientId?: string;
 }
 
-interface UseCallUpdatesOptions {
+interface UseLiveUpdatesOptions {
+  // Call events
   onCallCreated?: (call: CallUpdatePayload) => void;
   onCallUpdated?: (call: CallUpdatePayload) => void;
   onCallEnded?: (call: CallUpdatePayload) => void;
+  // Agent events
+  onAgentStarted?: (agent: AgentUpdatePayload) => void;
+  onAgentStopped?: (agent: AgentUpdatePayload) => void;
+  onAgentUpdated?: (agent: AgentUpdatePayload) => void;
+  onAgentCreated?: (agent: AgentUpdatePayload) => void;
+  onAgentDeleted?: (agent: AgentUpdatePayload) => void;
+  // Data change events (for configuration entities)
+  onDataChanged?: (payload: DataChangePayload) => void;
+  // Connection events
   onConnected?: (clientId: string) => void;
   onError?: (error: Error) => void;
   enabled?: boolean;
 }
+
+// Keep the old interface name for backward compatibility
+interface UseCallUpdatesOptions extends UseLiveUpdatesOptions {}
 
 /**
  * Hook to subscribe to real-time call updates via Server-Sent Events
@@ -44,6 +97,12 @@ export function useCallUpdates(options: UseCallUpdatesOptions = {}) {
     onCallCreated,
     onCallUpdated,
     onCallEnded,
+    onAgentStarted,
+    onAgentStopped,
+    onAgentUpdated,
+    onAgentCreated,
+    onAgentDeleted,
+    onDataChanged,
     onConnected,
     onError,
     enabled = true,
@@ -82,12 +141,13 @@ export function useCallUpdates(options: UseCallUpdatesOptions = {}) {
 
       eventSource.onmessage = (event) => {
         try {
-          const data: CallUpdateEvent = JSON.parse(event.data);
+          const data: LiveUpdateEvent = JSON.parse(event.data);
 
           switch (data.type) {
             case 'connected':
               onConnected?.(data.clientId || '');
               break;
+            // Call events
             case 'call_created':
               if (data.call) onCallCreated?.(data.call);
               break;
@@ -96,6 +156,28 @@ export function useCallUpdates(options: UseCallUpdatesOptions = {}) {
               break;
             case 'call_ended':
               if (data.call) onCallEnded?.(data.call);
+              break;
+            // Agent events
+            case 'agent_started':
+              if (data.agent) onAgentStarted?.(data.agent);
+              break;
+            case 'agent_stopped':
+              if (data.agent) onAgentStopped?.(data.agent);
+              break;
+            case 'agent_updated':
+              if (data.agent) onAgentUpdated?.(data.agent);
+              break;
+            case 'agent_created':
+              if (data.agent) onAgentCreated?.(data.agent);
+              break;
+            case 'agent_deleted':
+              if (data.agent) onAgentDeleted?.(data.agent);
+              break;
+            // Data change events
+            case 'data_changed':
+              if (data.entity && data.action && data.id) {
+                onDataChanged?.({ entity: data.entity, action: data.action, id: data.id });
+              }
               break;
           }
         } catch (parseError) {
@@ -122,7 +204,7 @@ export function useCallUpdates(options: UseCallUpdatesOptions = {}) {
     } catch (error) {
       onError?.(error instanceof Error ? error : new Error('Failed to connect to SSE'));
     }
-  }, [enabled, onCallCreated, onCallUpdated, onCallEnded, onConnected, onError]);
+  }, [enabled, onCallCreated, onCallUpdated, onCallEnded, onAgentStarted, onAgentStopped, onAgentUpdated, onAgentCreated, onAgentDeleted, onDataChanged, onConnected, onError]);
 
   // Connect on mount, disconnect on unmount
   useEffect(() => {

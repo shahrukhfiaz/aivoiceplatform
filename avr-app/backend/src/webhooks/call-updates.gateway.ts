@@ -1,26 +1,53 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Response } from 'express';
 
+export interface CallUpdatePayload {
+  id: string;
+  uuid: string;
+  agentId?: string | null;
+  agentName?: string | null;
+  callType?: string | null;
+  fromNumber?: string | null;
+  toNumber?: string | null;
+  providerId?: string | null;
+  providerName?: string | null;
+  endReason?: string | null;
+  cost?: number | null;
+  startedAt?: string | null;
+  endedAt?: string | null;
+  createdAt?: string | null;
+  hasRecording?: boolean;
+}
+
+export interface AgentUpdatePayload {
+  id: string;
+  name: string;
+  status: string;
+  mode?: string;
+}
+
 export interface CallUpdateEvent {
   type: 'call_created' | 'call_updated' | 'call_ended';
-  call: {
-    id: string;
-    uuid: string;
-    agentId?: string | null;
-    agentName?: string | null;
-    callType?: string | null;
-    fromNumber?: string | null;
-    toNumber?: string | null;
-    providerId?: string | null;
-    providerName?: string | null;
-    endReason?: string | null;
-    cost?: number | null;
-    startedAt?: string | null;
-    endedAt?: string | null;
-    createdAt?: string | null;
-    hasRecording?: boolean;
-  };
+  call: CallUpdatePayload;
 }
+
+export interface AgentUpdateEvent {
+  type: 'agent_started' | 'agent_stopped' | 'agent_updated' | 'agent_created' | 'agent_deleted';
+  agent: AgentUpdatePayload;
+}
+
+// Generic data change event for configuration entities
+export type DataEntityType = 'provider' | 'trunk' | 'number' | 'twilio_number' | 'recording' | 'phone';
+export type DataChangeAction = 'created' | 'updated' | 'deleted';
+
+export interface DataChangeEvent {
+  type: 'data_changed';
+  entity: DataEntityType;
+  action: DataChangeAction;
+  id: string;
+}
+
+export type LiveUpdateEvent = CallUpdateEvent | AgentUpdateEvent | DataChangeEvent;
 
 interface SSEClient {
   id: string;
@@ -55,13 +82,13 @@ export class CallUpdatesGateway {
   }
 
   /**
-   * Broadcast a call update to all connected SSE clients
+   * Broadcast any event to all connected SSE clients
    */
-  private broadcastCallUpdate(event: CallUpdateEvent): void {
+  private broadcast(event: LiveUpdateEvent): void {
     if (this.clients.length === 0) {
       return; // No clients connected, skip
     }
-    this.logger.debug(`Broadcasting ${event.type} for call ${event.call.uuid} to ${this.clients.length} SSE clients`);
+    this.logger.debug(`Broadcasting ${event.type} to ${this.clients.length} SSE clients`);
 
     const data = JSON.stringify(event);
     const message = `data: ${data}\n\n`;
@@ -78,34 +105,73 @@ export class CallUpdatesGateway {
     });
   }
 
+  // ============ Call Events ============
+
   /**
    * Broadcast that a new call was created
    */
-  notifyCallCreated(call: CallUpdateEvent['call']): void {
-    this.broadcastCallUpdate({
-      type: 'call_created',
-      call,
-    });
+  notifyCallCreated(call: CallUpdatePayload): void {
+    this.broadcast({ type: 'call_created', call });
   }
 
   /**
    * Broadcast that a call was updated (e.g., started, metadata changed)
    */
-  notifyCallUpdated(call: CallUpdateEvent['call']): void {
-    this.broadcastCallUpdate({
-      type: 'call_updated',
-      call,
-    });
+  notifyCallUpdated(call: CallUpdatePayload): void {
+    this.broadcast({ type: 'call_updated', call });
   }
 
   /**
    * Broadcast that a call has ended
    */
-  notifyCallEnded(call: CallUpdateEvent['call']): void {
-    this.broadcastCallUpdate({
-      type: 'call_ended',
-      call,
-    });
+  notifyCallEnded(call: CallUpdatePayload): void {
+    this.broadcast({ type: 'call_ended', call });
+  }
+
+  // ============ Agent Events ============
+
+  /**
+   * Broadcast that an agent was started
+   */
+  notifyAgentStarted(agent: AgentUpdatePayload): void {
+    this.broadcast({ type: 'agent_started', agent });
+  }
+
+  /**
+   * Broadcast that an agent was stopped
+   */
+  notifyAgentStopped(agent: AgentUpdatePayload): void {
+    this.broadcast({ type: 'agent_stopped', agent });
+  }
+
+  /**
+   * Broadcast that an agent was updated
+   */
+  notifyAgentUpdated(agent: AgentUpdatePayload): void {
+    this.broadcast({ type: 'agent_updated', agent });
+  }
+
+  /**
+   * Broadcast that an agent was created
+   */
+  notifyAgentCreated(agent: AgentUpdatePayload): void {
+    this.broadcast({ type: 'agent_created', agent });
+  }
+
+  /**
+   * Broadcast that an agent was deleted
+   */
+  notifyAgentDeleted(agent: AgentUpdatePayload): void {
+    this.broadcast({ type: 'agent_deleted', agent });
+  }
+
+  // ============ Generic Data Change Events ============
+
+  /**
+   * Broadcast that a data entity was changed (created, updated, or deleted)
+   */
+  notifyDataChanged(entity: DataEntityType, action: DataChangeAction, id: string): void {
+    this.broadcast({ type: 'data_changed', entity, action, id });
   }
 
   /**

@@ -10,6 +10,7 @@ import { CreateProviderDto } from './dto/create-provider.dto';
 import { UpdateProviderDto } from './dto/update-provider.dto';
 import { Provider } from './provider.entity';
 import { Agent } from '../agents/agent.entity';
+import { CallUpdatesGateway } from '../webhooks/call-updates.gateway';
 import {
   buildPaginatedResult,
   getPagination,
@@ -26,6 +27,7 @@ export class ProvidersService {
     private readonly providerRepository: Repository<Provider>,
     @InjectRepository(Agent)
     private readonly agentRepository: Repository<Agent>,
+    private readonly callUpdatesGateway: CallUpdatesGateway,
   ) {}
 
   async create(createProviderDto: CreateProviderDto): Promise<Provider> {
@@ -38,7 +40,9 @@ export class ProvidersService {
     }
 
     const provider = this.providerRepository.create(createProviderDto);
-    return this.providerRepository.save(provider);
+    const saved = await this.providerRepository.save(provider);
+    this.callUpdatesGateway.notifyDataChanged('provider', 'created', saved.id);
+    return saved;
   }
 
   async findAll(query: PaginationQuery): Promise<PaginatedResult<Provider>> {
@@ -86,12 +90,13 @@ export class ProvidersService {
     }
 
     const saved = await this.providerRepository.save(provider);
-    
+
     // Log that provider config was updated - containers will pick up changes on next call
     // STS containers fetch config dynamically from database on each new call (100ms cache)
     // No container restart needed - changes apply immediately to new calls
     this.logger.log(`Provider ${saved.name} (${saved.id}) configuration updated. Running agents will use new config on next call.`);
-    
+
+    this.callUpdatesGateway.notifyDataChanged('provider', 'updated', saved.id);
     return saved;
   }
 
@@ -142,6 +147,7 @@ export class ProvidersService {
       throw new NotFoundException('Provider not found');
     }
 
+    this.callUpdatesGateway.notifyDataChanged('provider', 'deleted', id);
     this.logger.log(`Provider ${id} deleted successfully`);
   }
 }

@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AsteriskService } from '../asterisk/asterisk.service';
+import { CallUpdatesGateway } from '../webhooks/call-updates.gateway';
 import { Agent } from '../agents/agent.entity';
 import { Phone } from '../phones/phone.entity';
 import { Trunk } from '../trunks/trunk.entity';
@@ -31,6 +32,7 @@ export class NumbersService {
     @InjectRepository(Trunk)
     private readonly trunksRepository: Repository<Trunk>,
     private readonly asteriskService: AsteriskService,
+    private readonly callUpdatesGateway: CallUpdatesGateway,
   ) {}
 
   async create(dto: CreateNumberDto): Promise<PhoneNumber> {
@@ -66,6 +68,8 @@ export class NumbersService {
       await this.numbersRepository.delete(saved.id);
       throw error;
     }
+
+    this.callUpdatesGateway.notifyDataChanged('number', 'created', saved.id);
 
     return saved;
   }
@@ -129,6 +133,8 @@ export class NumbersService {
 
     await this.asteriskService.provisionNumber(saved);
 
+    this.callUpdatesGateway.notifyDataChanged('number', 'updated', saved.id);
+
     return saved;
   }
 
@@ -147,6 +153,8 @@ export class NumbersService {
     await this.asteriskService.cleanOrphanedNumberEntries(number.value);
 
     await this.numbersRepository.remove(number);
+
+    this.callUpdatesGateway.notifyDataChanged('number', 'deleted', id);
   }
 
   private async buildAssociations(

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Book, Copy, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
+import { getApiUrl } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -480,7 +481,7 @@ function EndpointCard({ endpoint, baseUrl }: { endpoint: Endpoint; baseUrl: stri
 
 export default function ApiReferencePage() {
   const { dictionary: t } = useI18n();
-  const baseUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:3001` : 'http://localhost:3001';
+  const baseUrl = getApiUrl();
 
   const sections = [
     { key: 'authentication', label: t.apiReference?.sections?.authentication || 'Authentication' },

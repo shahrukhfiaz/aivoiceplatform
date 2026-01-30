@@ -59,37 +59,13 @@ function uuidv4() {
     });
 }
 
-// Set the following to null to disable (or set welcomeScreen = null if autoLogin is enabled)
-let welcomeScreen = autoLogin ? null : "<div class=\"UiWindowField\"><pre style=\"font-size: 12px\">";
-if (!autoLogin) {
-welcomeScreen += "===========================================================================\n";
-welcomeScreen += "Copyright © 2020 - All Rights Reserved\n";
-welcomeScreen += "===========================================================================\n";
-welcomeScreen += "\n";
-welcomeScreen += "                            NO WARRANTY\n";
-welcomeScreen += "\n";
-welcomeScreen += "BECAUSE THE PROGRAM IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY\n";
-welcomeScreen += "FOR THE PROGRAM, TO THE EXTENT PERMITTED BY APPLICABLE LAW.  EXCEPT WHEN\n";
-welcomeScreen += "OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES\n";
-welcomeScreen += "PROVIDE THE PROGRAM \"AS IS\" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED\n";
-welcomeScreen += "OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF\n";
-welcomeScreen += "MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE ENTIRE RISK AS\n";
-welcomeScreen += "TO THE QUALITY AND PERFORMANCE OF THE PROGRAM IS WITH YOU.  SHOULD THE\n";
-welcomeScreen += "PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING,\n";
-welcomeScreen += "REPAIR OR CORRECTION.\n";
-welcomeScreen += "\n";
-welcomeScreen += "IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING\n";
-welcomeScreen += "WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR\n";
-welcomeScreen += "REDISTRIBUTE THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES,\n";
-welcomeScreen += "INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING\n";
-welcomeScreen += "OUT OF THE USE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED\n";
-welcomeScreen += "TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY\n";
-welcomeScreen += "YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER\n";
-welcomeScreen += "PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE\n";
-welcomeScreen += "POSSIBILITY OF SUCH DAMAGES.\n";
-welcomeScreen += "\n";
-welcomeScreen += "============================================================================\n</pre>";
-welcomeScreen += "</div>";
+// Welcome screen permanently disabled - auto-accept T&C
+let welcomeScreen = null;
+// Always mark welcome screen as accepted
+localDB.setItem("WelcomeScreenAccept", "yes");
+// Always ensure profileUserID exists to skip configuration screen
+if (!localDB.getItem("profileUserID")) {
+    localDB.setItem("profileUserID", uuidv4());
 }
 
 /**
@@ -120,23 +96,26 @@ let wallpaperDark = getDbItem("wallpaperDark", "wallpaper.dark.webp");     // Wa
  * index.html for some sample provisioning and web_hook options.
  */
 let profileUserID = getDbItem("profileUserID", null);   // Internal reference ID. (DON'T CHANGE THIS!)
-let profileName = getDbItem("profileName", null);       // eg: Keyla James
-let wssServer = getDbItem("wssServer", null);           // eg: raspberrypi.local
-let WebSocketPort = getDbItem("WebSocketPort", null);   // eg: 444 | 4443
-let ServerPath = getDbItem("ServerPath", null);         // eg: /ws
-let SipDomain = getDbItem("SipDomain", null);           // eg: raspberrypi.local
-let SipUsername = getDbItem("SipUsername", null);       // eg: webrtc
-let SipPassword = getDbItem("SipPassword", null);       // eg: webrtc
+let profileName = getDbItem("profileName", "User");     // eg: Keyla James
+let wssServer = getDbItem("wssServer", "ai.digitalstorming.com");           // WebSocket server address
+let WebSocketPort = getDbItem("WebSocketPort", "8443");   // WebSocket port (TLS)
+let ServerPath = getDbItem("ServerPath", "/ws");         // WebSocket path
+let SipDomain = getDbItem("SipDomain", "ai.digitalstorming.com");           // SIP domain
+let SipUsername = getDbItem("SipUsername", "2000");       // Default SIP extension
+let SipPassword = getDbItem("SipPassword", "2000");       // Default SIP password
 
-// Apply defaults from phoneOptions if not set in localStorage
+// Apply defaults from phoneOptions - server settings ALWAYS use phoneOptions (centrally managed)
+// User credentials only use localStorage if they exist
 if (typeof phoneOptions !== 'undefined') {
-    if (profileName === null && phoneOptions.profileName) profileName = phoneOptions.profileName;
-    if (wssServer === null && phoneOptions.wssServer) wssServer = phoneOptions.wssServer;
-    if (WebSocketPort === null && phoneOptions.WebSocketPort) WebSocketPort = phoneOptions.WebSocketPort;
-    if (ServerPath === null && phoneOptions.ServerPath !== undefined) ServerPath = phoneOptions.ServerPath;
-    if (SipDomain === null && phoneOptions.SipDomain) SipDomain = phoneOptions.SipDomain;
-    if (SipUsername === null && phoneOptions.SipUsername) SipUsername = phoneOptions.SipUsername;
-    if (SipPassword === null && phoneOptions.SipPassword) SipPassword = phoneOptions.SipPassword;
+    // Server settings - ALWAYS use phoneOptions if defined (centrally managed by admin)
+    if (phoneOptions.wssServer) wssServer = phoneOptions.wssServer;
+    if (phoneOptions.WebSocketPort) WebSocketPort = phoneOptions.WebSocketPort;
+    if (phoneOptions.ServerPath !== undefined) ServerPath = phoneOptions.ServerPath;
+    if (phoneOptions.SipDomain) SipDomain = phoneOptions.SipDomain;
+    // User-specific settings - only apply phoneOptions if localStorage is empty
+    if (!profileName && phoneOptions.profileName) profileName = phoneOptions.profileName;
+    if (!SipUsername && phoneOptions.SipUsername) SipUsername = phoneOptions.SipUsername;
+    if (!SipPassword && phoneOptions.SipPassword) SipPassword = phoneOptions.SipPassword;
 }
 
 let SingleInstance = (getDbItem("SingleInstance", "1") == "1");      // Un-registers this account if the phone is opened in another tab/window

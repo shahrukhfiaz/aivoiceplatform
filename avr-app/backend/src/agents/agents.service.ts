@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { DockerService } from '../docker/docker.service';
 import { AsteriskService } from '../asterisk/asterisk.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
+import { CallUpdatesGateway, AgentUpdatePayload } from '../webhooks/call-updates.gateway';
 import { Provider, ProviderType } from '../providers/provider.entity';
 import { Trunk } from '../trunks/trunk.entity';
 import { PhoneNumber } from '../numbers/number.entity';
@@ -55,7 +56,20 @@ export class AgentsService {
     private readonly asteriskService: AsteriskService,
     @Inject(forwardRef(() => WebhooksService))
     private readonly webhooksService: WebhooksService,
+    private readonly callUpdatesGateway: CallUpdatesGateway,
   ) {}
+
+  /**
+   * Helper to convert Agent entity to AgentUpdatePayload for SSE broadcasting
+   */
+  private toAgentUpdatePayload(agent: Agent): AgentUpdatePayload {
+    return {
+      id: agent.id,
+      name: agent.name,
+      status: agent.status,
+      mode: agent.mode,
+    };
+  }
 
   async create(createAgentDto: CreateAgentDto): Promise<Agent> {
     const sipExtension = await this.generateUniqueSipExtension();
@@ -87,6 +101,10 @@ export class AgentsService {
     this.assertModeRequirements(agent);
 
     const saved = await this.agentRepository.save(agent);
+
+    // Broadcast agent created event
+    this.callUpdatesGateway.notifyAgentCreated(this.toAgentUpdatePayload(saved));
+
     return saved;
   }
 
@@ -158,6 +176,10 @@ export class AgentsService {
     this.assertModeRequirements(agent);
 
     const saved = await this.agentRepository.save(agent);
+
+    // Broadcast agent updated event
+    this.callUpdatesGateway.notifyAgentUpdated(this.toAgentUpdatePayload(saved));
+
     return saved;
   }
 
@@ -209,10 +231,17 @@ export class AgentsService {
 
     // 6. Now delete the agent
     this.logger.log(`Deleting agent ${id}: removing from database...`);
+
+    // Save agent info for broadcast before deleting
+    const agentPayload = this.toAgentUpdatePayload(agent);
+
     const result = await this.agentRepository.delete({ id });
     if (!result.affected) {
       throw new NotFoundException('Agent not found');
     }
+
+    // Broadcast agent deleted event
+    this.callUpdatesGateway.notifyAgentDeleted(agentPayload);
 
     this.logger.log(`Agent ${id} deleted successfully`);
   }
@@ -298,7 +327,10 @@ export class AgentsService {
 
     agent.status = AgentStatus.RUNNING;
     const saved = await this.agentRepository.save(agent);
-    
+
+    // Broadcast agent started event
+    this.callUpdatesGateway.notifyAgentStarted(this.toAgentUpdatePayload(saved));
+
     // Update all numbers linked to this agent to refresh Asterisk dialplan
     if (saved.numbers && saved.numbers.length > 0) {
       for (const number of saved.numbers) {
@@ -392,7 +424,12 @@ export class AgentsService {
     }
 
     agent.status = AgentStatus.STOPPED;
-    return this.agentRepository.save(agent);
+    const saved = await this.agentRepository.save(agent);
+
+    // Broadcast agent stopped event
+    this.callUpdatesGateway.notifyAgentStopped(this.toAgentUpdatePayload(saved));
+
+    return saved;
   }
 
   async dialOutbound(

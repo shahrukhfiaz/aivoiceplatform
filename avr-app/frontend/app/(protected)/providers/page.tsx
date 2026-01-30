@@ -16,6 +16,7 @@ import { ServerCog, Pencil, Trash2, Shield, ChevronDown, ChevronUp, Eye, EyeOff 
 import { apiFetch, ApiError, type PaginatedResponse } from '@/lib/api';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
+import { useCallUpdates, type DataChangePayload } from '@/hooks/use-call-updates';
 import {
   Dialog,
   DialogContent,
@@ -779,6 +780,15 @@ export default function ProvidersPage() {
   useEffect(() => {
     loadProviders();
   }, [loadProviders]);
+
+  // Subscribe to real-time provider updates via SSE
+  useCallUpdates({
+    onDataChanged: useCallback((payload: DataChangePayload) => {
+      if (payload.entity === 'provider') {
+        loadProviders();
+      }
+    }, [loadProviders]),
+  });
 
   const onSubmit = async (values: FormValues) => {
     if (isReadOnly) {

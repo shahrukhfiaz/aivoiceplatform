@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowUpDown, Download, Play, RefreshCcw } from 'lucide-react';
 import { apiFetch, ApiError, getApiUrl, getStoredToken } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { useCallUpdates, type DataChangePayload } from '@/hooks/use-call-updates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -49,6 +50,16 @@ export default function RecordingsPage() {
   useEffect(() => {
     loadRecordings();
   }, [loadRecordings]);
+
+  // Subscribe to real-time recording updates via SSE
+  useCallUpdates({
+    onDataChanged: useCallback((payload: DataChangePayload) => {
+      if (payload.entity === 'recording') {
+        // Reload recordings when a recording is created, updated, or deleted
+        loadRecordings();
+      }
+    }, [loadRecordings]),
+  });
 
   const formatDateTime = useCallback((value: string) => {
     const date = new Date(value);

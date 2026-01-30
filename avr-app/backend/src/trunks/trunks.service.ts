@@ -12,6 +12,7 @@ import { Agent } from '../agents/agent.entity';
 import { CreateTrunkDto } from './dto/create-trunk.dto';
 import { UpdateTrunkDto } from './dto/update-trunk.dto';
 import { Trunk, TrunkDirection } from './trunk.entity';
+import { CallUpdatesGateway } from '../webhooks/call-updates.gateway';
 import {
   buildPaginatedResult,
   getPagination,
@@ -27,6 +28,7 @@ export class TrunksService {
     @InjectRepository(Agent)
     private readonly agentRepository: Repository<Agent>,
     private readonly asteriskService: AsteriskService,
+    private readonly callUpdatesGateway: CallUpdatesGateway,
   ) {}
 
   async create(dto: CreateTrunkDto): Promise<Trunk> {
@@ -100,6 +102,7 @@ export class TrunksService {
       throw error;
     }
 
+    this.callUpdatesGateway.notifyDataChanged('trunk', 'created', reloaded.id);
     return reloaded;
   }
 
@@ -236,6 +239,7 @@ export class TrunksService {
 
     const saved = await this.trunksRepository.save(trunk);
     await this.asteriskService.provisionTrunk(saved);
+    this.callUpdatesGateway.notifyDataChanged('trunk', 'updated', saved.id);
     return saved;
   }
 
@@ -248,6 +252,7 @@ export class TrunksService {
     const direction = trunk.direction;
     await this.trunksRepository.remove(trunk);
     await this.asteriskService.removeTrunk(id, direction);
+    this.callUpdatesGateway.notifyDataChanged('trunk', 'deleted', id);
   }
 
   private normalizeCodecs(input?: string): string {

@@ -9,6 +9,7 @@ import { PlusCircle, Pencil, Trash2, Shield, Eye, EyeOff, PhoneIncoming, PhoneOu
 import { apiFetch, ApiError, type PaginatedResponse } from '@/lib/api';
 import { useI18n, type Dictionary } from '@/lib/i18n';
 import { useAuth } from '@/lib/auth';
+import { useCallUpdates, type DataChangePayload } from '@/hooks/use-call-updates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -255,6 +256,15 @@ export default function TrunksPage() {
     loadTrunks();
     loadAgents();
   }, [loadTrunks, loadAgents]);
+
+  // Subscribe to real-time trunk updates via SSE
+  useCallUpdates({
+    onDataChanged: useCallback((payload: DataChangePayload) => {
+      if (payload.entity === 'trunk') {
+        loadTrunks();
+      }
+    }, [loadTrunks]),
+  });
 
   const resetForms = () => {
     form.reset(defaultFormValues);
