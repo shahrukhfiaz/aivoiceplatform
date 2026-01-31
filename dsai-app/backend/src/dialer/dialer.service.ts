@@ -2,12 +2,18 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, In, Not } from 'typeorm';
 import { Lead } from '../leads/lead.entity';
-import { Campaign } from '../campaigns/campaign.entity';
+import { Campaign, CallingHours } from '../campaigns/campaign.entity';
 import { CampaignList } from '../campaigns/campaign-list.entity';
 import { Agent, AgentStatus } from '../agents/agent.entity';
 import { AgentsService } from '../agents/agents.service';
 import { CampaignsService } from '../campaigns/campaigns.service';
 import { CallUpdatesGateway } from '../webhooks/call-updates.gateway';
+import { DncService } from '../dnc/dnc.service';
+import {
+  getStateCallingRules,
+  inferTimezoneFromState,
+  isWithinStateCallingHours,
+} from './state-calling-rules';
 
 export interface DialerStats {
   campaignId: string;
@@ -46,6 +52,7 @@ export class DialerService {
     private readonly agentsService: AgentsService,
     private readonly campaignsService: CampaignsService,
     private readonly callUpdatesGateway: CallUpdatesGateway,
+    private readonly dncService: DncService,
   ) {}
 
   async startCampaign(campaignId: string): Promise<void> {
@@ -203,6 +210,15 @@ export class DialerService {
   }
 
   private async getNextLeads(campaignId: string, limit: number): Promise<Lead[]> {
+    // Get campaign to check calling hours settings
+    const campaign = await this.campaignsRepository.findOne({
+      where: { id: campaignId },
+    });
+
+    if (!campaign) {
+      return [];
+    }
+
     // Get all lists for this campaign
     const lists = await this.listsRepository.find({
       where: { campaignId, status: 'active' },
@@ -220,7 +236,10 @@ export class DialerService {
     // 2. High priority leads
     // 3. New leads
 
-    const leads = await this.leadsRepository.find({
+    // Get more leads than requested to account for DNC/time filtering
+    const fetchLimit = limit * 5;
+
+    const potentialLeads = await this.leadsRepository.find({
       where: [
         // Callbacks due
         {
@@ -238,10 +257,82 @@ export class DialerService {
         priority: 'DESC',
         createdAt: 'ASC',
       },
-      take: limit,
+      take: fetchLimit,
     });
 
-    return leads;
+    // Filter out DNC numbers and leads outside calling hours
+    const cleanLeads: Lead[] = [];
+    for (const lead of potentialLeads) {
+      if (cleanLeads.length >= limit) break;
+
+      // Check DNC
+      const isBlocked = await this.dncService.isBlocked(lead.phoneNumber, campaignId);
+      if (isBlocked) {
+        this.logger.debug(`Lead ${lead.id} (${lead.phoneNumber}) blocked by DNC`);
+        await this.leadsRepository.update(lead.id, { status: 'dnc' });
+        continue;
+      }
+
+      // Check calling hours
+      if (!this.isLeadWithinCallingHours(lead, campaign, now)) {
+        this.logger.debug(`Lead ${lead.id} (${lead.phoneNumber}) outside calling hours for state ${lead.state}`);
+        continue; // Skip but don't mark - will try again later
+      }
+
+      cleanLeads.push(lead);
+    }
+
+    return cleanLeads;
+  }
+
+  /**
+   * Check if a lead is within allowed calling hours based on:
+   * 1. Campaign's custom calling hours (if set)
+   * 2. State-specific TCPA rules (if respectStateRules is true)
+   */
+  private isLeadWithinCallingHours(lead: Lead, campaign: Campaign, now: Date): boolean {
+    const leadTimezone = lead.timezone || inferTimezoneFromState(lead.state);
+
+    // Convert current time to lead's local time
+    const localTimeStr = now.toLocaleTimeString('en-US', {
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: leadTimezone,
+    });
+
+    const localDate = new Date(now.toLocaleString('en-US', { timeZone: leadTimezone }));
+    const dayOfWeek = localDate.getDay();
+
+    // Check campaign-level calling hours first
+    if (campaign.callingHours) {
+      const hours = campaign.callingHours;
+      let allowedRange: { start: string; end: string } | null = null;
+
+      if (dayOfWeek === 0) {
+        allowedRange = hours.sunday;
+      } else if (dayOfWeek === 6) {
+        allowedRange = hours.saturday;
+      } else {
+        allowedRange = hours.weekday;
+      }
+
+      if (!allowedRange) {
+        return false; // No calls allowed on this day per campaign settings
+      }
+
+      if (localTimeStr < allowedRange.start || localTimeStr >= allowedRange.end) {
+        return false; // Outside campaign calling hours
+      }
+    }
+
+    // Check state-specific rules if enabled
+    if (campaign.respectStateRules && lead.state) {
+      return isWithinStateCallingHours(lead.state, now);
+    }
+
+    // Default: allow if no specific rules configured
+    return true;
   }
 
   private async dialLead(campaign: Campaign, lead: Lead): Promise<void> {

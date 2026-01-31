@@ -37,7 +37,7 @@ export interface AgentUpdateEvent {
 }
 
 // Generic data change event for configuration entities
-export type DataEntityType = 'provider' | 'trunk' | 'number' | 'twilio_number' | 'recording' | 'phone' | 'campaign' | 'lead' | 'disposition' | 'dialer';
+export type DataEntityType = 'provider' | 'trunk' | 'number' | 'twilio_number' | 'recording' | 'phone' | 'campaign' | 'lead' | 'disposition' | 'dialer' | 'dnc';
 export type DataChangeAction = 'created' | 'updated' | 'deleted' | 'started' | 'paused' | 'stopped' | 'call_result';
 
 export interface DataChangeEvent {

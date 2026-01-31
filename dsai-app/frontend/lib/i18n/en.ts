@@ -51,6 +51,8 @@ export const enDictionary = {
     guide: 'User Guide',
     campaigns: 'Campaigns',
     dispositions: 'Dispositions',
+    dnc: 'DNC List',
+    callbacks: 'Callbacks',
   },
   sidebarGroups: {
     build: 'Build',

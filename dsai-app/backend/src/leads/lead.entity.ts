@@ -12,6 +12,7 @@ import { CampaignList } from '../campaigns/campaign-list.entity';
 import { Disposition } from '../dispositions/disposition.entity';
 
 export type LeadStatus = 'new' | 'dialing' | 'contacted' | 'callback' | 'dnc' | 'completed';
+export type CallbackType = 'agent_specific' | 'campaign' | 'personal';
 
 @Entity()
 export class Lead {
@@ -86,6 +87,19 @@ export class Lead {
 
   @Column({ type: 'text', nullable: true })
   notes?: string | null;
+
+  // Callback scheduling fields
+  @Column({ type: 'datetime', nullable: true })
+  callbackScheduledAt?: Date | null;
+
+  @Column({ nullable: true })
+  callbackAgentId?: string | null; // For agent-specific callbacks
+
+  @Column({ type: 'text', nullable: true })
+  callbackType?: CallbackType | null;
+
+  @Column({ type: 'text', nullable: true })
+  callbackNotes?: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

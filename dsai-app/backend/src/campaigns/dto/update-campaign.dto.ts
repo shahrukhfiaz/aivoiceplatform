@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsEnum,
   IsObject,
+  IsBoolean,
   Min,
   Max,
 } from 'class-validator';
@@ -79,4 +80,48 @@ export class UpdateCampaignDto {
   @IsOptional()
   @IsString()
   script?: string;
+
+  // Calling hours (TCPA compliance)
+  @IsOptional()
+  @IsObject()
+  callingHours?: {
+    timezone: string;
+    weekday: { start: string; end: string };
+    saturday: { start: string; end: string } | null;
+    sunday: { start: string; end: string } | null;
+  } | null;
+
+  @IsOptional()
+  @IsBoolean()
+  respectStateRules?: boolean;
+
+  // AMD settings
+  @IsOptional()
+  @IsBoolean()
+  amdEnabled?: boolean;
+
+  @IsOptional()
+  @IsEnum(['fast', 'balanced', 'accurate'])
+  amdMode?: 'fast' | 'balanced' | 'accurate';
+
+  @IsOptional()
+  @IsObject()
+  amdSettings?: {
+    initialSilence?: number;
+    greeting?: number;
+    afterGreetingSilence?: number;
+    totalAnalysisTime?: number;
+    minWordLength?: number;
+    betweenWordsSilence?: number;
+    maximumWordLength?: number;
+    silenceThreshold?: number;
+  } | null;
+
+  @IsOptional()
+  @IsBoolean()
+  voicemailDropEnabled?: boolean;
+
+  @IsOptional()
+  @IsString()
+  voicemailDropRecordingId?: string | null;
 }

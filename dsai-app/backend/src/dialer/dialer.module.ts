@@ -7,9 +7,11 @@ import { Lead } from '../leads/lead.entity';
 import { Agent } from '../agents/agent.entity';
 import { DialerService } from './dialer.service';
 import { DialerController } from './dialer.controller';
+import { AmdService } from './amd.service';
 import { AgentsModule } from '../agents/agents.module';
 import { CampaignsModule } from '../campaigns/campaigns.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
+import { DncModule } from '../dnc/dnc.module';
 
 @Module({
   imports: [
@@ -17,9 +19,10 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
     forwardRef(() => AgentsModule),
     forwardRef(() => CampaignsModule),
     forwardRef(() => WebhooksModule),
+    DncModule,
   ],
-  providers: [DialerService, RolesGuard],
+  providers: [DialerService, AmdService, RolesGuard],
   controllers: [DialerController],
-  exports: [DialerService],
+  exports: [DialerService, AmdService],
 })
 export class DialerModule {}

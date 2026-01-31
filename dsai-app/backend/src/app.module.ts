@@ -23,6 +23,7 @@ import { DispositionsModule } from './dispositions/dispositions.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { LeadsModule } from './leads/leads.module';
 import { DialerModule } from './dialer/dialer.module';
+import { DncModule } from './dnc/dnc.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { DialerModule } from './dialer/dialer.module';
     CampaignsModule,
     LeadsModule,
     DialerModule,
+    DncModule,
   ],
   controllers: [AppController],
   providers: [AppService],

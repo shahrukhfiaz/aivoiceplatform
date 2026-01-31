@@ -51,6 +51,8 @@ export const itDictionary = {
     guide: 'Guida Utente',
     campaigns: 'Campagne',
     dispositions: 'Esiti',
+    dnc: 'Lista DNC',
+    callbacks: 'Richiamate',
   },
   sidebarGroups: {
     build: 'Build',

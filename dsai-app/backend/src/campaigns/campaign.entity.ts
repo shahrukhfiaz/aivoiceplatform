@@ -14,12 +14,31 @@ import { CampaignList } from './campaign-list.entity';
 
 export type CampaignStatus = 'active' | 'paused' | 'completed' | 'archived';
 export type DialingMode = 'predictive' | 'progressive' | 'preview' | 'power';
+export type AmdMode = 'fast' | 'balanced' | 'accurate';
 
 export interface CampaignSchedule {
   days: number[]; // 0-6 (Sunday-Saturday)
   startTime: string; // HH:mm format
   endTime: string; // HH:mm format
   timezone: string; // e.g., 'America/New_York'
+}
+
+export interface CallingHours {
+  timezone: string; // e.g., 'America/New_York'
+  weekday: { start: string; end: string }; // e.g., "08:00", "21:00"
+  saturday: { start: string; end: string } | null;
+  sunday: { start: string; end: string } | null;
+}
+
+export interface AmdSettings {
+  initialSilence: number; // ms, default 2500
+  greeting: number; // ms, default 1500
+  afterGreetingSilence: number; // ms, default 800
+  totalAnalysisTime: number; // ms, default 5000
+  minWordLength: number; // ms, default 100
+  betweenWordsSilence: number; // ms, default 50
+  maximumWordLength: number; // ms, default 5000
+  silenceThreshold: number; // 0-32767, default 256
 }
 
 @Entity()
@@ -76,6 +95,29 @@ export class Campaign {
 
   @Column({ type: 'text', nullable: true })
   script?: string | null;
+
+  // Time-of-day calling hours (TCPA compliance)
+  @Column({ type: 'simple-json', nullable: true })
+  callingHours?: CallingHours | null;
+
+  @Column({ type: 'boolean', default: true })
+  respectStateRules: boolean;
+
+  // AMD (Answering Machine Detection) settings
+  @Column({ type: 'boolean', default: false })
+  amdEnabled: boolean;
+
+  @Column({ type: 'text', default: 'balanced' })
+  amdMode: AmdMode;
+
+  @Column({ type: 'simple-json', nullable: true })
+  amdSettings?: AmdSettings | null;
+
+  @Column({ type: 'boolean', default: true })
+  voicemailDropEnabled: boolean;
+
+  @Column({ nullable: true })
+  voicemailDropRecordingId?: string | null;
 
   @OneToMany(() => CampaignList, (list) => list.campaign)
   lists?: CampaignList[];
