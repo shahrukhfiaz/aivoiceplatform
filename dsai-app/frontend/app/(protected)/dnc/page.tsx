@@ -506,14 +506,14 @@ export default function DncPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Campaign (Optional)</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <Select onValueChange={(val) => field.onChange(val === '_global' ? undefined : val)} value={field.value || '_global'}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Global (all campaigns)" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="">Global (all campaigns)</SelectItem>
+                                <SelectItem value="_global">Global (all campaigns)</SelectItem>
                                 {campaigns.map((c) => (
                                   <SelectItem key={c.id} value={c.id}>
                                     {c.name}
