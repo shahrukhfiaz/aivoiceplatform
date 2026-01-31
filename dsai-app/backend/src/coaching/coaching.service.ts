@@ -451,9 +451,9 @@ export class CoachingService {
     const categoryAverages: Record<string, number> = {};
     const categoryCounts: Record<string, number> = {};
 
-    for (const eval of evaluations) {
-      if (!eval.categoryScores) continue;
-      for (const cat of eval.categoryScores) {
+    for (const evaluation of evaluations) {
+      if (!evaluation.categoryScores) continue;
+      for (const cat of evaluation.categoryScores) {
         if (!categoryAverages[cat.name]) {
           categoryAverages[cat.name] = 0;
           categoryCounts[cat.name] = 0;

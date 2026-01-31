@@ -7,6 +7,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/user.entity';
 import { AiCostTrackerService } from './services/ai-cost-tracker.service';
 import { LlmGatewayService } from './services/llm-gateway.service';
 import { AiFeatureType } from './entities/ai-usage-log.entity';
@@ -20,7 +21,7 @@ export class AiCommonController {
   ) {}
 
   @Get('usage/summary')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async getUsageSummary(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
@@ -36,7 +37,7 @@ export class AiCommonController {
   }
 
   @Get('usage/daily')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async getDailyCosts(
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
@@ -50,7 +51,7 @@ export class AiCommonController {
   }
 
   @Get('usage/logs')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async getRecentLogs(
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,

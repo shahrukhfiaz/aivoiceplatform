@@ -11,6 +11,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/user.entity';
 import { AnalyticsService, AnalyzeCallOptions } from './analytics.service';
 import {
   AnalyticsStatus,
@@ -25,7 +26,7 @@ export class AnalyticsController {
   // ==================== Call Analysis ====================
 
   @Post('calls/:callId/analyze')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async analyzeCall(
     @Param('callId') callId: string,
     @Body()
@@ -132,7 +133,7 @@ export class AnalyticsController {
   }
 
   @Post('keywords')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async addKeyword(
     @Body()
     body: {
@@ -149,7 +150,7 @@ export class AnalyticsController {
   }
 
   @Delete('keywords/:id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async deleteKeyword(@Param('id') id: string) {
     await this.analyticsService.deleteKeyword(id);
     return { success: true };

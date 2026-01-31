@@ -178,8 +178,8 @@ export class ScoringService {
     // Apply timezone/time-of-day optimization
     const now = new Date();
     const leadHour = this.getLocalHour(now, features.timezone);
-    const timeMultiplier = parseFloat(timeMultipliers[leadHour.toString()] || '1');
-    const dayMultiplier = parseFloat(dayMultipliers[now.getDay().toString()] || '1');
+    const timeMultiplier = parseFloat(String(timeMultipliers[leadHour.toString()] ?? 1));
+    const dayMultiplier = parseFloat(String(dayMultipliers[now.getDay().toString()] ?? 1));
 
     score *= timeMultiplier;
     score *= dayMultiplier;
@@ -286,8 +286,8 @@ export class ScoringService {
     for (let day = 0; day < 7; day++) {
       for (let hour = 8; hour <= 20; hour++) {
         // Business hours only
-        const timeM = parseFloat(timeMultipliers[hour.toString()] || '1');
-        const dayM = parseFloat(dayMultipliers[day.toString()] || '1');
+        const timeM = parseFloat(String(timeMultipliers[hour.toString()] ?? 1));
+        const dayM = parseFloat(String(dayMultipliers[day.toString()] ?? 1));
         const probability = Math.min(1, (timeM * dayM) / 1.5);
 
         if (probability >= 0.7) {

@@ -12,6 +12,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/user.entity';
 import { CoachingService, EvaluateCallOptions } from './coaching.service';
 import {
   EvaluationStatus,
@@ -26,7 +27,7 @@ export class CoachingController {
   // ==================== Evaluations ====================
 
   @Post('evaluate/:callId')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async evaluateCall(
     @Param('callId') callId: string,
     @Body()
@@ -112,7 +113,7 @@ export class CoachingController {
   }
 
   @Post('agents/:agentId/insights/generate')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async generateAgentInsights(
     @Param('agentId') agentId: string,
     @Query('campaignId') campaignId?: string,
@@ -126,7 +127,7 @@ export class CoachingController {
   }
 
   @Post('insights/:id/acknowledge')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async acknowledgeInsight(
     @Param('id') id: string,
     @Body() body: { notes?: string },
@@ -164,7 +165,7 @@ export class CoachingController {
   }
 
   @Post('agents/:agentId/recommendations')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async createRecommendation(
     @Param('agentId') agentId: string,
     @Body()
@@ -191,7 +192,7 @@ export class CoachingController {
   }
 
   @Patch('recommendations/:id/status')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async updateRecommendationStatus(
     @Param('id') id: string,
     @Body()

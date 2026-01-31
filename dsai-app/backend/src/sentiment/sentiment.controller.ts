@@ -10,6 +10,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/user.entity';
 import {
   SentimentService,
   AnalyzeCallSentimentOptions,
@@ -24,7 +25,7 @@ export class SentimentController {
   // ==================== Analysis ====================
 
   @Post('calls/:callId/analyze')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async analyzeCall(
     @Param('callId') callId: string,
     @Body()

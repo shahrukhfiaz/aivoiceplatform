@@ -10,6 +10,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/user.entity';
 import { ScoringService, LeadData } from './scoring.service';
 import { ScoringModel } from './entities/scoring-model.entity';
 
@@ -21,7 +22,7 @@ export class ScoringController {
   // ==================== Lead Scoring ====================
 
   @Post('leads/:leadId/score')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async scoreLead(
     @Param('leadId') leadId: string,
     @Body() body: Omit<LeadData, 'id'>,
@@ -30,7 +31,7 @@ export class ScoringController {
   }
 
   @Post('batch')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async scoreLeadsBatch(@Body() body: { leads: LeadData[] }) {
     return this.scoringService.scoreLeadsBatch(body.leads);
   }
@@ -87,13 +88,13 @@ export class ScoringController {
   }
 
   @Post('models')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async createModel(@Body() body: Partial<ScoringModel>) {
     return this.scoringService.createModel(body);
   }
 
   @Post('models/:id/activate')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async activateModel(@Param('id') id: string) {
     return this.scoringService.activateModel(id);
   }
