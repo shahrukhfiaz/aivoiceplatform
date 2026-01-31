@@ -54,6 +54,14 @@ export const enDictionary = {
     dnc: 'DNC List',
     callbacks: 'Callbacks',
     qa: 'Quality Assurance',
+    webhooks: 'Webhooks',
+    crm: 'CRM',
+    reports: 'Reports',
+    callerId: 'Caller ID',
+    analytics: 'Speech Analytics',
+    scoring: 'Lead Scoring',
+    coaching: 'AI Coaching',
+    sentiment: 'Sentiment',
   },
   sidebarGroups: {
     build: 'Build',
@@ -62,6 +70,7 @@ export const enDictionary = {
     administration: 'Administration',
     developer: 'Developer',
     observe: 'Observe',
+    ai: 'AI & Analytics',
     help: 'Help',
   },
   dashboard: {

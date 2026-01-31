@@ -25,6 +25,16 @@ import { LeadsModule } from './leads/leads.module';
 import { DialerModule } from './dialer/dialer.module';
 import { DncModule } from './dnc/dnc.module';
 import { QaModule } from './qa/qa.module';
+import { CallerIdModule } from './caller-id/caller-id.module';
+import { CrmModule } from './crm/crm.module';
+import { ReportsModule } from './reports/reports.module';
+import { OrganizationsModule } from './organizations/organizations.module';
+// AI & Analytics modules
+import { AiCommonModule } from './ai-common/ai-common.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { ScoringModule } from './scoring/scoring.module';
+import { CoachingModule } from './coaching/coaching.module';
+import { SentimentModule } from './sentiment/sentiment.module';
 
 @Module({
   imports: [
@@ -59,6 +69,16 @@ import { QaModule } from './qa/qa.module';
     DialerModule,
     DncModule,
     QaModule,
+    CallerIdModule,
+    CrmModule,
+    ReportsModule,
+    OrganizationsModule,
+    // AI & Analytics modules
+    AiCommonModule,
+    AnalyticsModule,
+    ScoringModule,
+    CoachingModule,
+    SentimentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

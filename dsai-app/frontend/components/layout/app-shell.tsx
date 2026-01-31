@@ -28,6 +28,14 @@ import {
   Ban,
   CalendarClock,
   ClipboardCheck,
+  PhoneForwarded,
+  Database,
+  FileText,
+  Webhook,
+  BarChart3,
+  TrendingUp,
+  GraduationCap,
+  Heart,
   type LucideIcon,
 } from "lucide-react";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
@@ -103,10 +111,13 @@ export function AppShell({ children }: PropsWithChildren) {
   const navDialerItems = useMemo<NavItem[]>(
     () => [
       { href: "/campaigns", label: dictionary.navigation.campaigns || "Campaigns", icon: Target },
+      { href: "/caller-id", label: dictionary.navigation.callerId || "Caller ID", icon: PhoneForwarded },
       { href: "/dispositions", label: dictionary.navigation.dispositions || "Dispositions", icon: Tag },
       { href: "/dnc", label: dictionary.navigation.dnc || "DNC List", icon: Ban },
       { href: "/callbacks", label: dictionary.navigation.callbacks || "Callbacks", icon: CalendarClock },
       { href: "/qa", label: dictionary.navigation.qa || "Quality Assurance", icon: ClipboardCheck },
+      { href: "/crm", label: dictionary.navigation.crm || "CRM", icon: Database },
+      { href: "/reports", label: dictionary.navigation.reports || "Reports", icon: FileText },
     ],
     [dictionary]
   );
@@ -132,6 +143,7 @@ export function AppShell({ children }: PropsWithChildren) {
   const navDeveloperItems = useMemo<NavItem[]>(
     () => [
       { href: "/api-keys", label: dictionary.navigation.apiKeys || "API Keys", icon: Key },
+      { href: "/webhooks", label: dictionary.navigation.webhooks || "Webhooks", icon: Webhook },
       { href: "/api-reference", label: dictionary.navigation.apiReference || "API Reference", icon: Book },
     ],
     [dictionary]
@@ -153,6 +165,16 @@ export function AppShell({ children }: PropsWithChildren) {
     [dictionary]
   );
 
+  const navAiItems = useMemo<NavItem[]>(
+    () => [
+      { href: "/analytics", label: dictionary.navigation.analytics || "Speech Analytics", icon: BarChart3 },
+      { href: "/scoring", label: dictionary.navigation.scoring || "Lead Scoring", icon: TrendingUp },
+      { href: "/coaching", label: dictionary.navigation.coaching || "AI Coaching", icon: GraduationCap },
+      { href: "/sentiment", label: dictionary.navigation.sentiment || "Sentiment", icon: Heart },
+    ],
+    [dictionary]
+  );
+
   return (
     <SidebarProvider>
       <AppShellContent
@@ -165,6 +187,7 @@ export function AppShell({ children }: PropsWithChildren) {
         navDeveloperItems={navDeveloperItems}
         navObserveItems={navObserveItems}
         navHelpItems={navHelpItems}
+        navAiItems={navAiItems}
         userName={user?.username ?? ""}
         userRole={user?.role ?? ""}
         onLogout={logout}
@@ -189,6 +212,7 @@ type AppShellContentProps = {
   navAdministrationItems: NavItem[];
   navDeveloperItems: NavItem[];
   navHelpItems: NavItem[];
+  navAiItems: NavItem[];
   userName: string;
   userRole: string;
   onLogout: () => void;
@@ -210,6 +234,7 @@ function AppShellContent({
   navDeveloperItems,
   navObserveItems,
   navHelpItems,
+  navAiItems,
   userName,
   userRole,
   onLogout,
@@ -435,6 +460,35 @@ function AppShellContent({
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {displayednavObserveItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = pathname.startsWith(item.href);
+                      return (
+                        <SidebarMenuItem key={item.href}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            className="flex items-center gap-3"
+                          >
+                            <Link href={item.href} onClick={handleNavigate}>
+                              <Icon className="h-4 w-4" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ) : null}
+            {navAiItems.length > 0 ? (
+              <SidebarGroup className="gap-3">
+                <SidebarGroupLabel>
+                  {dictionary.sidebarGroups.ai || "AI & Analytics"}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {navAiItems.map((item) => {
                       const Icon = item.icon;
                       const isActive = pathname.startsWith(item.href);
                       return (
