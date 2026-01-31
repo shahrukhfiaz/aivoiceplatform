@@ -1,0 +1,32 @@
+{
+    "name": "dsai-ami",
+    "version": "1.1.0",
+    "author": "DSAI",
+    "description": "Webservice to transfer or terminate a call via AMI",
+    "main": "index.js",
+    "scripts": {
+        "start": "node .",
+        "start:dev": "nodemon --inspect ./index.js",
+        "dc:build": "docker build --platform=linux/amd64 -t agentvoiceresponse/dsai-ami:latest -t agentvoiceresponse/dsai-ami:${npm_package_version} .",
+        "dc:push": "docker push agentvoiceresponse/dsai-ami:latest && docker push agentvoiceresponse/dsai-ami:${npm_package_version}"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/agentvoiceresponse/dsai-ami.git"
+    },
+    "dependencies": {
+        "asterisk-manager": "^0.2.0",
+        "dotenv": "^16.4.5",
+        "express": "^4.21.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.7"
+    },
+    "contributors": [
+        {
+            "name": "Giuseppe Careri",
+            "email": "info@gcareri.com",
+            "url": "https://github.com/gcareri"
+        }
+    ]
+}

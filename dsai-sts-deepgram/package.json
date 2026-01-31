@@ -1,0 +1,34 @@
+{
+  "name": "dsai-sts-deepgram",
+  "version": "1.2.0",
+  "author": "DSAI <info@agentvoiceresponse.com>",
+  "description": "Deepgram Speech-to-Speech service for DSAI",
+  "main": "index.js",
+  "scripts": {
+    "start": "node .",
+    "start:dev": "nodemon --inspect ./index.js",
+    "dc:build": "docker build --platform=linux/amd64 -t agentvoiceresponse/dsai-sts-deepgram:latest -t agentvoiceresponse/dsai-sts-deepgram:${npm_package_version} .",
+    "dc:push": "docker push agentvoiceresponse/dsai-sts-deepgram:latest && docker push agentvoiceresponse/dsai-sts-deepgram:${npm_package_version}"
+  },
+  "dependencies": {
+    "@deepgram/sdk": "^4.11.2",
+    "axios": "^1.13.1",
+    "dotenv": "^17.2.3",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "contributors": [
+    {
+      "name": "Giuseppe Careri",
+      "email": "info@gcareri.com",
+      "url": "https://github.com/gcareri"
+    },
+    {
+      "name": "Mirko Bertone",
+      "email": "bertonemirko@gmail.com",
+      "url": "https://github.com/mirkobertone"
+    }
+  ]
+}

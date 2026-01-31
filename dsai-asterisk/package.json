@@ -1,0 +1,15 @@
+{
+  "name": "dsai-asterisk",
+  "version": "1.5.1",
+  "description": "",
+  "author": "Giuseppe Careri <info@gcareri.com> (https://gcareri.com)",
+  "contributors": [],
+  "license": "MIT",
+  "scripts": {
+    "build": "docker build -t dsai-asterisk:latest ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agentvoiceresponse/dsai-asterisk.git"
+  }
+}
