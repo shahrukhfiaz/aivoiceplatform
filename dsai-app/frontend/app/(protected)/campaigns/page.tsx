@@ -15,6 +15,9 @@ import {
   Target,
   Users,
   Phone,
+  Clock,
+  Volume2,
+  Shield,
 } from 'lucide-react';
 import { apiFetch, ApiError, type PaginatedResponse } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -62,6 +65,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Switch } from '@/components/ui/switch';
+
+const callingHoursSchema = z.object({
+  timezone: z.string(),
+  weekday: z.object({ start: z.string(), end: z.string() }),
+  saturday: z.object({ start: z.string(), end: z.string() }).nullable(),
+  sunday: z.object({ start: z.string(), end: z.string() }).nullable(),
+}).nullable().optional();
+
+const amdSettingsSchema = z.object({
+  initialSilence: z.number().optional(),
+  greeting: z.number().optional(),
+  afterGreetingSilence: z.number().optional(),
+  totalAnalysisTime: z.number().optional(),
+  minWordLength: z.number().optional(),
+  betweenWordsSilence: z.number().optional(),
+  maximumWordLength: z.number().optional(),
+  silenceThreshold: z.number().optional(),
+}).nullable().optional();
 
 const campaignSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
@@ -76,6 +98,15 @@ const campaignSchema = z.object({
   maxAttemptsPerLead: z.number().min(1).max(10),
   defaultCallerId: z.string().optional(),
   script: z.string().optional(),
+  // Calling hours (TCPA compliance)
+  callingHours: callingHoursSchema,
+  respectStateRules: z.boolean().optional(),
+  // AMD settings
+  amdEnabled: z.boolean().optional(),
+  amdMode: z.enum(['fast', 'balanced', 'accurate']).optional(),
+  amdSettings: amdSettingsSchema,
+  voicemailDropEnabled: z.boolean().optional(),
+  voicemailDropRecordingId: z.string().optional(),
 });
 
 type CampaignFormValues = z.infer<typeof campaignSchema>;
@@ -90,6 +121,24 @@ interface TrunkDto {
   id: string;
   name: string;
   direction: string;
+}
+
+interface CallingHours {
+  timezone: string;
+  weekday: { start: string; end: string };
+  saturday: { start: string; end: string } | null;
+  sunday: { start: string; end: string } | null;
+}
+
+interface AmdSettings {
+  initialSilence?: number;
+  greeting?: number;
+  afterGreetingSilence?: number;
+  totalAnalysisTime?: number;
+  minWordLength?: number;
+  betweenWordsSilence?: number;
+  maximumWordLength?: number;
+  silenceThreshold?: number;
 }
 
 interface CampaignDto {
@@ -109,6 +158,16 @@ interface CampaignDto {
   maxAttemptsPerLead: number;
   defaultCallerId?: string;
   script?: string;
+  // Calling hours
+  callingHours?: CallingHours | null;
+  respectStateRules?: boolean;
+  // AMD
+  amdEnabled?: boolean;
+  amdMode?: 'fast' | 'balanced' | 'accurate';
+  amdSettings?: AmdSettings | null;
+  voicemailDropEnabled?: boolean;
+  voicemailDropRecordingId?: string;
+  // Stats
   totalLeads?: number;
   dialedLeads?: number;
   contactedLeads?: number;
@@ -162,6 +221,15 @@ export default function CampaignsPage() {
     maxAttemptsPerLead: 3,
     defaultCallerId: '',
     script: '',
+    // Calling hours defaults
+    callingHours: null,
+    respectStateRules: true,
+    // AMD defaults
+    amdEnabled: false,
+    amdMode: 'balanced',
+    amdSettings: null,
+    voicemailDropEnabled: true,
+    voicemailDropRecordingId: '',
   };
 
   const form = useForm<CampaignFormValues>({
@@ -277,6 +345,15 @@ export default function CampaignsPage() {
       maxAttemptsPerLead: campaign.maxAttemptsPerLead,
       defaultCallerId: campaign.defaultCallerId || '',
       script: campaign.script || '',
+      // Calling hours
+      callingHours: campaign.callingHours || null,
+      respectStateRules: campaign.respectStateRules ?? true,
+      // AMD
+      amdEnabled: campaign.amdEnabled ?? false,
+      amdMode: campaign.amdMode || 'balanced',
+      amdSettings: campaign.amdSettings || null,
+      voicemailDropEnabled: campaign.voicemailDropEnabled ?? true,
+      voicemailDropRecordingId: campaign.voicemailDropRecordingId || '',
     });
     setEditDialogOpen(true);
   };
@@ -554,6 +631,106 @@ export default function CampaignsPage() {
           </FormItem>
         )}
       />
+
+      {/* Calling Hours Section */}
+      <div className="rounded-lg border p-4 space-y-4">
+        <div className="flex items-center gap-2 font-medium">
+          <Clock className="h-4 w-4" />
+          Calling Hours (TCPA Compliance)
+        </div>
+
+        <FormField
+          control={formInstance.control}
+          name="respectStateRules"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>Respect State Rules</FormLabel>
+                <FormDescription>
+                  Automatically apply state-specific calling hour restrictions (TCPA)
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <div className="text-xs text-muted-foreground">
+          Default: 8am-9pm local time (federal TCPA minimum). State-specific rules may be stricter.
+        </div>
+      </div>
+
+      {/* AMD Section */}
+      <div className="rounded-lg border p-4 space-y-4">
+        <div className="flex items-center gap-2 font-medium">
+          <Volume2 className="h-4 w-4" />
+          Answering Machine Detection (AMD)
+        </div>
+
+        <FormField
+          control={formInstance.control}
+          name="amdEnabled"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>Enable AMD</FormLabel>
+                <FormDescription>
+                  Detect answering machines before connecting to agent
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={formInstance.control}
+          name="amdMode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Detection Mode</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value || 'balanced'}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select mode" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="fast">Fast (&lt;3s, ~75% accuracy)</SelectItem>
+                  <SelectItem value="balanced">Balanced (3-5s, ~85% accuracy)</SelectItem>
+                  <SelectItem value="accurate">Accurate (5-8s, ~95% accuracy)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Trade-off between speed and accuracy
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={formInstance.control}
+          name="voicemailDropEnabled"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <FormLabel>Enable Voicemail Drop</FormLabel>
+                <FormDescription>
+                  Leave a pre-recorded message when machine is detected
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value ?? true} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
     </>
   );
 

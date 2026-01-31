@@ -53,6 +53,7 @@ export const itDictionary = {
     dispositions: 'Esiti',
     dnc: 'Lista DNC',
     callbacks: 'Richiamate',
+    qa: 'Controllo Qualità',
   },
   sidebarGroups: {
     build: 'Build',

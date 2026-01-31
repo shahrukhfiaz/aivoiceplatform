@@ -53,6 +53,7 @@ export const enDictionary = {
     dispositions: 'Dispositions',
     dnc: 'DNC List',
     callbacks: 'Callbacks',
+    qa: 'Quality Assurance',
   },
   sidebarGroups: {
     build: 'Build',

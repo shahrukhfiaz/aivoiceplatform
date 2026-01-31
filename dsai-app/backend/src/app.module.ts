@@ -24,6 +24,7 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 import { LeadsModule } from './leads/leads.module';
 import { DialerModule } from './dialer/dialer.module';
 import { DncModule } from './dnc/dnc.module';
+import { QaModule } from './qa/qa.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { DncModule } from './dnc/dnc.module';
     LeadsModule,
     DialerModule,
     DncModule,
+    QaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

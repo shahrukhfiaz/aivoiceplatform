@@ -27,6 +27,7 @@ import {
   Tag,
   Ban,
   CalendarClock,
+  ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
@@ -105,6 +106,7 @@ export function AppShell({ children }: PropsWithChildren) {
       { href: "/dispositions", label: dictionary.navigation.dispositions || "Dispositions", icon: Tag },
       { href: "/dnc", label: dictionary.navigation.dnc || "DNC List", icon: Ban },
       { href: "/callbacks", label: dictionary.navigation.callbacks || "Callbacks", icon: CalendarClock },
+      { href: "/qa", label: dictionary.navigation.qa || "Quality Assurance", icon: ClipboardCheck },
     ],
     [dictionary]
   );
