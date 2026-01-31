@@ -117,9 +117,10 @@ if (typeof phoneOptions !== 'undefined') {
     if (phoneOptions.ServerPath !== undefined) ServerPath = phoneOptions.ServerPath;
     if (phoneOptions.SipDomain) SipDomain = phoneOptions.SipDomain;
     // User-specific settings - only apply phoneOptions if localStorage is empty
-    if (!profileName && phoneOptions.profileName) profileName = phoneOptions.profileName;
-    if (!SipUsername && phoneOptions.SipUsername) SipUsername = phoneOptions.SipUsername;
-    if (!SipPassword && phoneOptions.SipPassword) SipPassword = phoneOptions.SipPassword;
+    // IMPORTANT: Check for non-empty strings - empty string "" should NOT overwrite URL params/localStorage
+    if (!profileName && phoneOptions.profileName && phoneOptions.profileName !== "") profileName = phoneOptions.profileName;
+    if (!SipUsername && phoneOptions.SipUsername && phoneOptions.SipUsername !== "") SipUsername = phoneOptions.SipUsername;
+    if (!SipPassword && phoneOptions.SipPassword && phoneOptions.SipPassword !== "") SipPassword = phoneOptions.SipPassword;
     console.log("DEBUG: After phoneOptions early check - SipUsername:", SipUsername);
 }
 
@@ -538,8 +539,10 @@ $(document).ready(function () {
     if(options.WebSocketPort !== undefined) WebSocketPort = options.WebSocketPort;
     if(options.ServerPath !== undefined) ServerPath = options.ServerPath;
     if(options.SipDomain !== undefined) SipDomain = options.SipDomain;
-    if(options.SipUsername !== undefined) SipUsername = options.SipUsername;
-    if(options.SipPassword !== undefined) SipPassword = options.SipPassword;
+    // IMPORTANT: Also check for empty string to prevent phoneOptions overwriting URL params/localStorage
+    // An empty string ("") passes !== undefined but should NOT overwrite valid credentials
+    if(options.SipUsername !== undefined && options.SipUsername !== "") SipUsername = options.SipUsername;
+    if(options.SipPassword !== undefined && options.SipPassword !== "") SipPassword = options.SipPassword;
     console.log("DEBUG: document.ready - After phoneOptions. SipUsername:", SipUsername);
     if(options.SingleInstance !== undefined) SingleInstance = options.SingleInstance;
     if(options.TransportConnectionTimeout !== undefined) TransportConnectionTimeout = options.TransportConnectionTimeout;

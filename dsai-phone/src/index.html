@@ -47,14 +47,26 @@
             // Provision runtime options can go here.
             // Local development settings for non-secure WebSocket (ws://)
             // For localhost, phone.js will automatically use ws:// protocol
+            //
+            // ============================================================================
+            // WARNING: DO NOT ADD SipUsername, SipPassword, or profileName HERE!
+            // ============================================================================
+            // These values are passed via URL parameters (e.g., ?user=2000&pass=2000)
+            // or stored in localStorage. Adding them here (even as empty strings "")
+            // will BREAK auto-login because empty string !== undefined in JavaScript.
+            //
+            // BAD:  SipUsername: "",           // This BREAKS URL param handling!
+            // BAD:  SipUsername: undefined,    // This also BREAKS it!
+            // GOOD: (don't include the property at all)
+            // ============================================================================
+            //
             var phoneOptions = {
                 loadAlternateLang: true,
                 wssServer: "ai.digitalstorming.com",  // WebSocket server address
                 WebSocketPort: "8443",      // TLS WebSocket port (Traefik terminates TLS)
                 ServerPath: "/ws",          // WebSocket path
                 SipDomain: "ai.digitalstorming.com"   // SIP domain
-                // SipUsername, SipPassword, and profileName are set via URL params or localStorage
-                // Do NOT set them here as empty strings - that overwrites URL params
+                // DO NOT ADD: SipUsername, SipPassword, profileName - these come from URL params!
             }
 
             // Occurs after the language file is loaded
@@ -171,7 +183,7 @@
     <!-- Loadable Scripts -->
     <script type="text/javascript" src="https://dtd6jl0d42sve.cloudfront.net/lib/jquery/jquery-3.6.1.min.js"></script>
     <script type="text/javascript" src="https://dtd6jl0d42sve.cloudfront.net/lib/jquery/jquery-ui-1.13.2.min.js"></script>
-    <script type="text/javascript" src="phone.js?v=20260131"></script>
+    <script type="text/javascript" src="phone.js?v=20260131b"></script>
 
     <!-- Deferred Scripts -->
     <script type="text/javascript" src="https://dtd6jl0d42sve.cloudfront.net/lib/jquery/jquery.md5-min.js" defer="true"></script>
