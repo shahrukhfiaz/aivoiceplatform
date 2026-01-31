@@ -12,6 +12,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/user.entity';
 import {
   OutgoingWebhookService,
   CreateOutgoingWebhookDto,
@@ -24,7 +25,7 @@ export class OutgoingWebhookController {
   constructor(private readonly webhookService: OutgoingWebhookService) {}
 
   @Post()
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async create(@Body() dto: CreateOutgoingWebhookDto) {
     return this.webhookService.create(dto);
   }
@@ -40,7 +41,7 @@ export class OutgoingWebhookController {
   }
 
   @Patch(':id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateOutgoingWebhookDto,
@@ -49,14 +50,14 @@ export class OutgoingWebhookController {
   }
 
   @Delete(':id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async delete(@Param('id') id: string) {
     await this.webhookService.delete(id);
     return { success: true };
   }
 
   @Patch(':id/toggle')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async toggleActive(
     @Param('id') id: string,
     @Body() body: { isActive: boolean },
@@ -65,7 +66,7 @@ export class OutgoingWebhookController {
   }
 
   @Post(':id/test')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async testWebhook(@Param('id') id: string) {
     return this.webhookService.testWebhook(id);
   }

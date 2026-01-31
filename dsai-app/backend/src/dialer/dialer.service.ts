@@ -9,6 +9,7 @@ import { AgentsService } from '../agents/agents.service';
 import { CampaignsService } from '../campaigns/campaigns.service';
 import { CallUpdatesGateway } from '../webhooks/call-updates.gateway';
 import { DncService } from '../dnc/dnc.service';
+import { CallerIdService } from '../caller-id/caller-id.service';
 import {
   getStateCallingRules,
   inferTimezoneFromState,
@@ -53,6 +54,7 @@ export class DialerService {
     private readonly campaignsService: CampaignsService,
     private readonly callUpdatesGateway: CallUpdatesGateway,
     private readonly dncService: DncService,
+    private readonly callerIdService: CallerIdService,
   ) {}
 
   async startCampaign(campaignId: string): Promise<void> {
@@ -343,21 +345,57 @@ export class DialerService {
       lastDialedAt: new Date(),
     });
 
+    // Select caller ID based on local presence settings
+    let callerId = campaign.defaultCallerId;
+    let callerIdUsageLogId: string | null = null;
+
+    if (campaign.localPresenceEnabled && campaign.callerIdPoolId) {
+      try {
+        const selectedNumber = await this.callerIdService.selectCallerIdForLead(
+          campaign.callerIdPoolId,
+          lead.phoneNumber,
+          campaign.id,
+        );
+
+        if (selectedNumber) {
+          callerId = selectedNumber.phoneNumber;
+          // Record usage for tracking
+          const usageLog = await this.callerIdService.recordCallStart(
+            selectedNumber.id,
+            lead.id,
+            campaign.id,
+            lead.phoneNumber,
+          );
+          callerIdUsageLogId = usageLog.id;
+          this.logger.debug(`Selected caller ID ${callerId} (area code ${selectedNumber.areaCode}) for lead ${lead.id}`);
+        } else if (campaign.callerIdStrategy === 'pool_only') {
+          this.logger.warn(`No caller ID available in pool for lead ${lead.id}, skipping`);
+          await this.leadsRepository.update(lead.id, { status: 'new' });
+          return;
+        }
+        // If pool_first or default_only, fall through to defaultCallerId
+      } catch (err) {
+        this.logger.error(`Error selecting caller ID: ${err.message}`);
+        // Fall through to defaultCallerId
+      }
+    }
+
     // Initiate call via agent
     try {
       await this.agentsService.dialOutbound(campaign.aiAgentId!, {
         toNumber: lead.phoneNumber,
-        fromNumber: campaign.defaultCallerId || undefined,
+        fromNumber: callerId || undefined,
         trunkId: campaign.outboundTrunkId || undefined,
         metadata: {
           campaignId: campaign.id,
           leadId: lead.id,
           attemptNumber: lead.dialAttempts + 1,
+          callerIdUsageLogId,
         },
         timeout: campaign.ringTimeout,
       });
 
-      this.logger.log(`Dialing lead ${lead.id} (${lead.phoneNumber}) for campaign ${campaign.name}`);
+      this.logger.log(`Dialing lead ${lead.id} (${lead.phoneNumber}) with caller ID ${callerId || 'default'} for campaign ${campaign.name}`);
     } catch (err) {
       // Revert lead status on failure
       await this.leadsRepository.update(lead.id, {

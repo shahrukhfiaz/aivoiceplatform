@@ -12,6 +12,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/user.entity';
 import {
   CrmService,
   CreateConnectionDto,
@@ -28,7 +29,7 @@ export class CrmController {
   // ==================== Connection Endpoints ====================
 
   @Post('connections')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async createConnection(@Body() dto: CreateConnectionDto) {
     return this.crmService.createConnection(dto);
   }
@@ -44,7 +45,7 @@ export class CrmController {
   }
 
   @Patch('connections/:id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async updateConnection(
     @Param('id') id: string,
     @Body() dto: UpdateConnectionDto,
@@ -53,7 +54,7 @@ export class CrmController {
   }
 
   @Delete('connections/:id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async deleteConnection(@Param('id') id: string) {
     await this.crmService.deleteConnection(id);
     return { success: true };
@@ -62,7 +63,7 @@ export class CrmController {
   // ==================== OAuth Endpoints ====================
 
   @Get('connections/:id/auth-url')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async getAuthUrl(
     @Param('id') id: string,
     @Query('redirectUri') redirectUri: string,
@@ -72,7 +73,7 @@ export class CrmController {
   }
 
   @Post('connections/:id/oauth-callback')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async handleOAuthCallback(
     @Param('id') id: string,
     @Body() body: { code: string; redirectUri: string },
@@ -81,13 +82,13 @@ export class CrmController {
   }
 
   @Post('connections/:id/refresh-token')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async refreshToken(@Param('id') id: string) {
     return this.crmService.refreshConnectionToken(id);
   }
 
   @Post('connections/:id/test')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async testConnection(@Param('id') id: string) {
     return this.crmService.testConnection(id);
   }
@@ -95,7 +96,7 @@ export class CrmController {
   // ==================== Field Mapping Endpoints ====================
 
   @Post('field-mappings')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async createFieldMapping(@Body() dto: CreateFieldMappingDto) {
     return this.crmService.createFieldMapping(dto);
   }
@@ -109,7 +110,7 @@ export class CrmController {
   }
 
   @Patch('field-mappings/:id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async updateFieldMapping(
     @Param('id') id: string,
     @Body() dto: Partial<CreateFieldMappingDto>,
@@ -118,14 +119,14 @@ export class CrmController {
   }
 
   @Delete('field-mappings/:id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async deleteFieldMapping(@Param('id') id: string) {
     await this.crmService.deleteFieldMapping(id);
     return { success: true };
   }
 
   @Post('connections/:connectionId/field-mappings/bulk')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async bulkCreateFieldMappings(
     @Param('connectionId') connectionId: string,
     @Body() body: { mappings: Omit<CreateFieldMappingDto, 'connectionId'>[] },
@@ -152,7 +153,7 @@ export class CrmController {
   // ==================== Sync Endpoints ====================
 
   @Post('connections/:id/sync')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async syncRecord(
     @Param('id') connectionId: string,
     @Body() body: {
@@ -172,7 +173,7 @@ export class CrmController {
   }
 
   @Post('connections/:id/sync/bulk')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async bulkSyncRecords(
     @Param('id') connectionId: string,
     @Body() body: {

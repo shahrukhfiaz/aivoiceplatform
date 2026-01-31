@@ -15,6 +15,7 @@ import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/user.entity';
 import {
   ReportsService,
   CreateReportDto,
@@ -171,7 +172,7 @@ export class ReportsController {
   // ==================== Report Scheduling ====================
 
   @Post('schedules')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async createSchedule(@Body() dto: CreateScheduleDto) {
     return this.reportsService.createSchedule(dto);
   }
@@ -182,7 +183,7 @@ export class ReportsController {
   }
 
   @Patch('schedules/:id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async updateSchedule(
     @Param('id') id: string,
     @Body() dto: Partial<CreateScheduleDto>,
@@ -191,14 +192,14 @@ export class ReportsController {
   }
 
   @Delete('schedules/:id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async deleteSchedule(@Param('id') id: string) {
     await this.reportsService.deleteSchedule(id);
     return { success: true };
   }
 
   @Patch('schedules/:id/toggle')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async toggleSchedule(
     @Param('id') id: string,
     @Body() body: { isActive: boolean },
@@ -209,7 +210,7 @@ export class ReportsController {
   // ==================== System Reports ====================
 
   @Post('seed-system-reports')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async seedSystemReports() {
     await this.reportsService.seedSystemReports();
     return { success: true, message: 'System reports seeded' };

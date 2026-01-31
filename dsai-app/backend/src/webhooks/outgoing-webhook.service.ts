@@ -140,15 +140,14 @@ export class OutgoingWebhookService {
       const startTime = Date.now();
 
       // Create log entry
-      const log = await this.logRepo.save(
-        this.logRepo.create({
-          webhookId: webhook.id,
-          event: payload.event,
-          status: 'pending',
-          payload,
-          attemptNumber: attempt,
-        }),
-      );
+      const logEntry = this.logRepo.create({
+        webhookId: webhook.id,
+        event: payload.event,
+        status: 'pending',
+        payload: payload as unknown as Record<string, unknown>,
+        attemptNumber: attempt,
+      });
+      const log = await this.logRepo.save(logEntry) as WebhookDeliveryLog;
 
       try {
         const body = JSON.stringify(payload);
@@ -208,9 +207,10 @@ export class OutgoingWebhookService {
           errorMessage: lastError,
           durationMs,
         });
-      } catch (err) {
+      } catch (err: unknown) {
         const durationMs = Date.now() - startTime;
-        lastError = err.name === 'AbortError' ? 'Request timeout' : err.message;
+        const error = err as Error;
+        lastError = error.name === 'AbortError' ? 'Request timeout' : error.message;
 
         await this.logRepo.update(log.id, {
           status: 'failed',
@@ -323,10 +323,11 @@ export class OutgoingWebhookService {
         success: false,
         message: `Server returned HTTP ${response.status}: ${await response.text().catch(() => 'No response body')}`,
       };
-    } catch (err) {
+    } catch (err: unknown) {
+      const error = err as Error;
       return {
         success: false,
-        message: err.name === 'AbortError' ? 'Request timed out' : err.message,
+        message: error.name === 'AbortError' ? 'Request timed out' : error.message,
       };
     }
   }

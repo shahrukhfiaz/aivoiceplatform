@@ -842,7 +842,7 @@ export class ReportsService {
     }
   }
 
-  private calculateNextRun(schedule: Pick<ReportSchedule, 'frequency' | 'time' | 'dayOfWeek' | 'dayOfMonth' | 'timezone'>): Date {
+  private calculateNextRun(schedule: { frequency: ScheduleFrequency; time?: string; dayOfWeek?: number; dayOfMonth?: number; timezone?: string }): Date {
     const now = new Date();
     const [hours, minutes] = (schedule.time || '08:00').split(':').map(Number);
     let next = new Date(now);

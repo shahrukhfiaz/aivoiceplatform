@@ -123,10 +123,15 @@ export default function CrmConnectionDetailPage() {
   // Mapping dialog
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
   const [selectedEntityType, setSelectedEntityType] = useState('lead');
-  const [newMapping, setNewMapping] = useState({
+  const [newMapping, setNewMapping] = useState<{
+    localField: string;
+    crmField: string;
+    direction: 'to_crm' | 'from_crm' | 'bidirectional';
+    required: boolean;
+  }>({
     localField: '',
     crmField: '',
-    direction: 'to_crm' as const,
+    direction: 'to_crm',
     required: false,
   });
 

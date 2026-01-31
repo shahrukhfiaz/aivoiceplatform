@@ -11,10 +11,12 @@ import {
 import { Agent } from '../agents/agent.entity';
 import { Trunk } from '../trunks/trunk.entity';
 import { CampaignList } from './campaign-list.entity';
+import { CallerIdPool } from '../caller-id/caller-id-pool.entity';
 
 export type CampaignStatus = 'active' | 'paused' | 'completed' | 'archived';
 export type DialingMode = 'predictive' | 'progressive' | 'preview' | 'power';
 export type AmdMode = 'fast' | 'balanced' | 'accurate';
+export type CallerIdStrategy = 'pool_first' | 'default_only' | 'pool_only';
 
 export interface CampaignSchedule {
   days: number[]; // 0-6 (Sunday-Saturday)
@@ -118,6 +120,20 @@ export class Campaign {
 
   @Column({ nullable: true })
   voicemailDropRecordingId?: string | null;
+
+  // Local Presence / Caller ID Pool settings
+  @ManyToOne(() => CallerIdPool, { nullable: true, eager: true })
+  @JoinColumn({ name: 'callerIdPoolId' })
+  callerIdPool?: CallerIdPool | null;
+
+  @Column({ nullable: true })
+  callerIdPoolId?: string | null;
+
+  @Column({ type: 'boolean', default: true })
+  localPresenceEnabled: boolean;
+
+  @Column({ type: 'text', default: 'pool_first' })
+  callerIdStrategy: CallerIdStrategy;
 
   @OneToMany(() => CampaignList, (list) => list.campaign)
   lists?: CampaignList[];

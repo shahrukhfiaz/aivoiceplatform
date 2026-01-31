@@ -12,6 +12,7 @@ import { AgentsModule } from '../agents/agents.module';
 import { CampaignsModule } from '../campaigns/campaigns.module';
 import { WebhooksModule } from '../webhooks/webhooks.module';
 import { DncModule } from '../dnc/dnc.module';
+import { CallerIdModule } from '../caller-id/caller-id.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { DncModule } from '../dnc/dnc.module';
     forwardRef(() => CampaignsModule),
     forwardRef(() => WebhooksModule),
     DncModule,
+    CallerIdModule,
   ],
   providers: [DialerService, AmdService, RolesGuard],
   controllers: [DialerController],

@@ -119,4 +119,17 @@ export class CreateCampaignDto {
   @IsOptional()
   @IsString()
   voicemailDropRecordingId?: string;
+
+  // Local Presence / Caller ID Pool
+  @IsOptional()
+  @IsString()
+  callerIdPoolId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  localPresenceEnabled?: boolean;
+
+  @IsOptional()
+  @IsEnum(['pool_first', 'default_only', 'pool_only'])
+  callerIdStrategy?: 'pool_first' | 'default_only' | 'pool_only';
 }

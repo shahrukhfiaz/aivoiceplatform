@@ -12,6 +12,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/user.entity';
 import {
   OrganizationsService,
   CreateOrganizationDto,
@@ -27,13 +28,13 @@ export class OrganizationsController {
   // ==================== Organization CRUD ====================
 
   @Post()
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async create(@Body() dto: CreateOrganizationDto) {
     return this.orgsService.create(dto);
   }
 
   @Get()
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async findAll() {
     return this.orgsService.findAll();
   }
@@ -49,7 +50,7 @@ export class OrganizationsController {
   }
 
   @Patch(':id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateOrganizationDto,
@@ -58,7 +59,7 @@ export class OrganizationsController {
   }
 
   @Delete(':id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async delete(@Param('id') id: string) {
     await this.orgsService.delete(id);
     return { success: true };
@@ -67,7 +68,7 @@ export class OrganizationsController {
   // ==================== Plan Management ====================
 
   @Patch(':id/plan')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async updatePlan(
     @Param('id') id: string,
     @Body() body: { plan: PlanType },
@@ -76,7 +77,7 @@ export class OrganizationsController {
   }
 
   @Post(':id/suspend')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async suspend(
     @Param('id') id: string,
     @Body() body: { reason?: string },
@@ -85,7 +86,7 @@ export class OrganizationsController {
   }
 
   @Post(':id/reactivate')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async reactivate(@Param('id') id: string) {
     return this.orgsService.reactivateOrganization(id);
   }
@@ -108,7 +109,7 @@ export class OrganizationsController {
   // ==================== Admin Operations ====================
 
   @Post('reset-monthly-usage')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   async resetMonthlyUsage() {
     await this.orgsService.resetMonthlyUsage();
     return { success: true, message: 'Monthly usage reset for all organizations' };

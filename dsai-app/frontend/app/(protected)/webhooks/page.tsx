@@ -129,10 +129,12 @@ const createWebhookSchema = z.object({
   url: z.string().url('Must be a valid URL'),
   events: z.array(z.string()).min(1, 'Select at least one event'),
   secret: z.string().optional(),
-  maxRetries: z.number().int().min(1).max(10).default(3),
-  timeoutMs: z.number().int().min(1000).max(30000).default(5000),
+  maxRetries: z.number().int().min(1).max(10),
+  timeoutMs: z.number().int().min(1000).max(30000),
   headers: z.string().optional(),
 });
+
+type WebhookFormData = z.infer<typeof createWebhookSchema>;
 
 export default function WebhooksPage() {
   const { dictionary: t } = useI18n();
@@ -151,7 +153,7 @@ export default function WebhooksPage() {
   const [logs, setLogs] = useState<WebhookDeliveryLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
-  const form = useForm<z.infer<typeof createWebhookSchema>>({
+  const form = useForm<WebhookFormData>({
     resolver: zodResolver(createWebhookSchema),
     defaultValues: {
       name: '',
@@ -200,7 +202,7 @@ export default function WebhooksPage() {
     }
   }, [editTarget, form]);
 
-  const onSubmit = async (values: z.infer<typeof createWebhookSchema>) => {
+  const onSubmit = async (values: WebhookFormData) => {
     setSubmitting(true);
     try {
       const payload: Record<string, unknown> = {
