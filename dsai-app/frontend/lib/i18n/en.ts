@@ -49,9 +49,12 @@ export const enDictionary = {
     apiKeys: 'API Keys',
     apiReference: 'API Reference',
     guide: 'User Guide',
+    campaigns: 'Campaigns',
+    dispositions: 'Dispositions',
   },
   sidebarGroups: {
     build: 'Build',
+    dialer: 'Dialer',
     telephony: 'Telephony',
     administration: 'Administration',
     developer: 'Developer',

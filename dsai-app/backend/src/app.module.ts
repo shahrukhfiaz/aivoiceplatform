@@ -18,6 +18,11 @@ import { ApiKeysModule } from './api-keys/api-keys.module';
 import { CallsModule } from './calls/calls.module';
 import { TwilioModule } from './twilio/twilio.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
+// BPO Dialer modules
+import { DispositionsModule } from './dispositions/dispositions.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
+import { LeadsModule } from './leads/leads.module';
+import { DialerModule } from './dialer/dialer.module';
 
 @Module({
   imports: [
@@ -45,6 +50,11 @@ import { MonitoringModule } from './monitoring/monitoring.module';
     ApiKeysModule,
     CallsModule,
     MonitoringModule,
+    // BPO Dialer modules
+    DispositionsModule,
+    CampaignsModule,
+    LeadsModule,
+    DialerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

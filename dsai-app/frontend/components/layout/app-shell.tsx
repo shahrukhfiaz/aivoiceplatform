@@ -23,6 +23,8 @@ import {
   Book,
   HelpCircle,
   Smartphone,
+  Target,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
@@ -95,6 +97,14 @@ export function AppShell({ children }: PropsWithChildren) {
     [dictionary]
   );
 
+  const navDialerItems = useMemo<NavItem[]>(
+    () => [
+      { href: "/campaigns", label: dictionary.navigation.campaigns || "Campaigns", icon: Target },
+      { href: "/dispositions", label: dictionary.navigation.dispositions || "Dispositions", icon: Tag },
+    ],
+    [dictionary]
+  );
+
   const navTelephonyItems = useMemo<NavItem[]>(
     () => [
       { href: "/numbers", label: dictionary.navigation.numbers, icon: Hash },
@@ -143,6 +153,7 @@ export function AppShell({ children }: PropsWithChildren) {
         pathname={pathname}
         navPrimaryItems={navPrimaryItems}
         navBuildItems={navBuildItems}
+        navDialerItems={navDialerItems}
         navTelephonyItems={navTelephonyItems}
         navAdministrationItems={navAdministrationItems}
         navDeveloperItems={navDeveloperItems}
@@ -167,6 +178,7 @@ type AppShellContentProps = {
   navPrimaryItems: NavItem[];
   navObserveItems: NavItem[];
   navBuildItems: NavItem[];
+  navDialerItems: NavItem[];
   navTelephonyItems: NavItem[];
   navAdministrationItems: NavItem[];
   navDeveloperItems: NavItem[];
@@ -186,6 +198,7 @@ function AppShellContent({
   pathname,
   navPrimaryItems,
   navBuildItems,
+  navDialerItems,
   navTelephonyItems,
   navAdministrationItems,
   navDeveloperItems,
@@ -271,6 +284,35 @@ function AppShellContent({
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {displayednavBuildItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = pathname.startsWith(item.href);
+                      return (
+                        <SidebarMenuItem key={item.href}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            className="flex items-center gap-3"
+                          >
+                            <Link href={item.href} onClick={handleNavigate}>
+                              <Icon className="h-4 w-4" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ) : null}
+            {navDialerItems.length > 0 ? (
+              <SidebarGroup className="gap-3">
+                <SidebarGroupLabel>
+                  {dictionary.sidebarGroups.dialer || "Dialer"}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {navDialerItems.map((item) => {
                       const Icon = item.icon;
                       const isActive = pathname.startsWith(item.href);
                       return (

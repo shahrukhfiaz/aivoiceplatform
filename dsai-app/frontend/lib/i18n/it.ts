@@ -49,9 +49,12 @@ export const itDictionary = {
     apiKeys: 'Chiavi API',
     apiReference: 'Riferimento API',
     guide: 'Guida Utente',
+    campaigns: 'Campagne',
+    dispositions: 'Esiti',
   },
   sidebarGroups: {
     build: 'Build',
+    dialer: 'Dialer',
     telephony: 'Telefonia',
     administration: 'Amministrazione',
     developer: 'Sviluppatore',
