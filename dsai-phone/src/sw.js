@@ -1,4 +1,4 @@
-const cacheID = "v2";
+const cacheID = "v3";
 // Cache list - only include files that actually exist and are needed for offline
 // Note: index.html is always loaded from network, wallpapers are optional
 const CacheItems = [
