@@ -1,4 +1,4 @@
-const cacheID = "v3";
+const cacheID = "v20260131";
 // Cache list - only include files that actually exist and are needed for offline
 // Note: index.html is always loaded from network, wallpapers are optional
 const CacheItems = [
@@ -111,6 +111,11 @@ self.addEventListener("fetch", function(event){
 
     if(event.request.url.endsWith("index.html")){
         console.log("Special Home Page handling...", event.request.url);
+        event.respondWith(loadHomePage(event.request));
+    }
+    else if(event.request.url.includes("phone.js")){
+        // Always load phone.js from network to get latest updates
+        console.log("Loading phone.js from network...", event.request.url);
         event.respondWith(loadHomePage(event.request));
     }
     else {

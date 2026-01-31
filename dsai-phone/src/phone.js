@@ -35,6 +35,7 @@ const autoPath = urlParams.get('path');
 // Auto-configure if URL parameters are provided
 if (autoLogin && autoUser && autoPass) {
     console.log("Auto-login mode enabled via URL parameters");
+    console.log("DEBUG: URL params - user:", autoUser, "pass:", autoPass ? "[SET]" : "[NOT SET]", "domain:", autoDomain);
     // Set configuration in localStorage
     if (autoWss) localDB.setItem("wssServer", autoWss);
     if (autoPort) localDB.setItem("WebSocketPort", autoPort);
@@ -42,6 +43,7 @@ if (autoLogin && autoUser && autoPass) {
     if (autoDomain) localDB.setItem("SipDomain", autoDomain);
     localDB.setItem("SipUsername", autoUser);
     localDB.setItem("SipPassword", autoPass);
+    console.log("DEBUG: After localStorage set - SipUsername in localStorage:", localDB.getItem("SipUsername"));
     if (autoName) localDB.setItem("profileName", autoName);
     // Auto-accept welcome screen and create profile
     localDB.setItem("WelcomeScreenAccept", "yes");
@@ -103,10 +105,12 @@ let ServerPath = getDbItem("ServerPath", "/ws");         // WebSocket path
 let SipDomain = getDbItem("SipDomain", "ai.digitalstorming.com");           // SIP domain
 let SipUsername = getDbItem("SipUsername", "2000");       // Default SIP extension
 let SipPassword = getDbItem("SipPassword", "2000");       // Default SIP password
+console.log("DEBUG: After getDbItem - SipUsername:", SipUsername, "localStorage value:", localDB.getItem("SipUsername"));
 
 // Apply defaults from phoneOptions - server settings ALWAYS use phoneOptions (centrally managed)
 // User credentials only use localStorage if they exist
 if (typeof phoneOptions !== 'undefined') {
+    console.log("DEBUG: phoneOptions exists, SipUsername property:", phoneOptions.SipUsername, "SipPassword property:", phoneOptions.SipPassword);
     // Server settings - ALWAYS use phoneOptions if defined (centrally managed by admin)
     if (phoneOptions.wssServer) wssServer = phoneOptions.wssServer;
     if (phoneOptions.WebSocketPort) WebSocketPort = phoneOptions.WebSocketPort;
@@ -116,6 +120,7 @@ if (typeof phoneOptions !== 'undefined') {
     if (!profileName && phoneOptions.profileName) profileName = phoneOptions.profileName;
     if (!SipUsername && phoneOptions.SipUsername) SipUsername = phoneOptions.SipUsername;
     if (!SipPassword && phoneOptions.SipPassword) SipPassword = phoneOptions.SipPassword;
+    console.log("DEBUG: After phoneOptions early check - SipUsername:", SipUsername);
 }
 
 let SingleInstance = (getDbItem("SingleInstance", "1") == "1");      // Un-registers this account if the phone is opened in another tab/window
@@ -519,7 +524,9 @@ $(document).ready(function () {
     // var phoneOptions = {} // would work in index.html
     // Even if the setting is defined on the database, these variables get loaded after.
 
+    console.log("DEBUG: document.ready - Before phoneOptions. SipUsername:", SipUsername);
     var options = (typeof phoneOptions !== 'undefined')? phoneOptions : {};
+    console.log("DEBUG: document.ready - options.SipUsername:", options.SipUsername, "typeof:", typeof options.SipUsername);
     if(options.welcomeScreen !== undefined) welcomeScreen = options.welcomeScreen;
     if(options.loadAlternateLang !== undefined) loadAlternateLang = options.loadAlternateLang;
     if(options.profileName !== undefined) profileName = options.profileName;
@@ -533,6 +540,7 @@ $(document).ready(function () {
     if(options.SipDomain !== undefined) SipDomain = options.SipDomain;
     if(options.SipUsername !== undefined) SipUsername = options.SipUsername;
     if(options.SipPassword !== undefined) SipPassword = options.SipPassword;
+    console.log("DEBUG: document.ready - After phoneOptions. SipUsername:", SipUsername);
     if(options.SingleInstance !== undefined) SingleInstance = options.SingleInstance;
     if(options.TransportConnectionTimeout !== undefined) TransportConnectionTimeout = options.TransportConnectionTimeout;
     if(options.TransportReconnectionAttempts !== undefined) TransportReconnectionAttempts = options.TransportReconnectionAttempts;
