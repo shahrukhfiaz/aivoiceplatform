@@ -1,29 +1,29 @@
-# AVR Infrastructure (avr-infra)
+# DSAI Infrastructure (dsai-infra)
 
 [![Discord](https://img.shields.io/discord/1347239846632226998?label=Discord&logo=discord)](https://discord.gg/DFTU69Hg74)
-[![GitHub Repo stars](https://img.shields.io/github/stars/agentvoiceresponse/avr-infra?style=social)](https://github.com/agentvoiceresponse/avr-infra)
+[![GitHub Repo stars](https://img.shields.io/github/stars/agentvoiceresponse/dsai-infra?style=social)](https://github.com/agentvoiceresponse/dsai-infra)
 [![Ko-fi](https://img.shields.io/badge/Support%20us%20on-Ko--fi-ff5e5b.svg)](https://ko-fi.com/agentvoiceresponse)
 
-The **AVR Infrastructure** project is designed to launch the Agent Voice Response application, which will start the Core, ASR, LLM, and TTS services integrated with Asterisk Audiosocket. Additionally, the project runs a Docker Asterisk with a basic PJSIP configuration. To test, register a SIP client with username 1000 and password 1000 using TCP. The extensions will be generated once the AI Agent is configured from the application. The extension to call will be shown on the GUI.
+The **DSAI Infrastructure** project is designed to launch the Agent Voice Response application, which will start the Core, ASR, LLM, and TTS services integrated with Asterisk Audiosocket. Additionally, the project runs a Docker Asterisk with a basic PJSIP configuration. To test, register a SIP client with username 1000 and password 1000 using TCP. The extensions will be generated once the AI Agent is configured from the application. The extension to call will be shown on the GUI.
 
 ## Project Overview
 
 The infrastructure allows you to deploy the following services:
 
-- **AVR Core**: Manages the interaction between the customer and the VoIP PBX (e.g., Asterisk), processing the audio stream and managing the integration with ASR, LLM, and TTS services.
+- **DSAI Core**: Manages the interaction between the customer and the VoIP PBX (e.g., Asterisk), processing the audio stream and managing the integration with ASR, LLM, and TTS services.
 - **ASR Services**: Converts voice to text. The infrastructure supports services like Google Cloud Speech-to-Text, Deepgram.
 - **LLM Services**: Handles the logic and responses for customer interactions. For example, OpenAI, OpenRouter.ai, Typebot can be integrated to generate AI-based responses.
-- **TTS Services**: Converts text responses into audio, allowing AVR Core to reply to the customer with speech. Services like Google Cloud Text-to-Speech, Deepgram, ElevenLabs are supported.
+- **TTS Services**: Converts text responses into audio, allowing DSAI Core to reply to the customer with speech. Services like Google Cloud Text-to-Speech, Deepgram, ElevenLabs are supported.
 
 This architecture allows you to customize and swap ASR, LLM, and TTS providers as needed.
 
 > **🆕 NEW: Speech To Speech in recent versions**  
-> AVR now supports integration with OpenAI Realtime and Ultravox Speech-to-Speech. You can find an example configuration in the `docker-compose-openai-realtime.yml` or `docker-compose-ultravox.yml` file.
+> DSAI now supports integration with OpenAI Realtime and Ultravox Speech-to-Speech. You can find an example configuration in the `docker-compose-openai-realtime.yml` or `docker-compose-ultravox.yml` file.
 
-> **💡 Note:** If the provider you want to integrate does not support ASR but only Speech-to-Text, we've implemented support for this as well. Simply add the `avr-asr-to-stt` container between `avr-core` and your STT container. You can find an example using ElevenLabs STT in the `docker-compose-elevenlabs.yml` file.
+> **💡 Note:** If the provider you want to integrate does not support ASR but only Speech-to-Text, we've implemented support for this as well. Simply add the `dsai-asr-to-stt` container between `dsai-core` and your STT container. You can find an example using ElevenLabs STT in the `docker-compose-elevenlabs.yml` file.
 
-> **🎵 NEW: Using Ambient Background Noise in AVR**  
-> AVR Core now supports the ability to add ambient background sounds to calls. This feature allows you to simulate real-world environments (e.g., office, café, nature) or introduce controlled background noise during testing. Find the complete documentation here: [Using Ambient Background Noise in AVR](https://wiki.agentvoiceresponse.com/en/using-ambient-background-noise-in-avr)
+> **🎵 NEW: Using Ambient Background Noise in DSAI**  
+> DSAI Core now supports the ability to add ambient background sounds to calls. This feature allows you to simulate real-world environments (e.g., office, café, nature) or introduce controlled background noise during testing. Find the complete documentation here: [Using Ambient Background Noise in DSAI](https://wiki.agentvoiceresponse.com/en/using-ambient-background-noise-in-avr)
 
 ## Key Features
 
@@ -36,7 +36,7 @@ This architecture allows you to customize and swap ASR, LLM, and TTS providers a
 
 ### Flow Overview
 
-1. **AVR Core** receives an audio stream from the Asterisk PBX.
+1. **DSAI Core** receives an audio stream from the Asterisk PBX.
 2. The audio is sent to an **ASR** service to transcribe the speech to text.
 3. The transcribed text is forwarded to an **LLM** service to generate an AI-powered response.
 4. The generated response is sent to a **TTS** service to convert the text back to speech.
@@ -44,7 +44,7 @@ This architecture allows you to customize and swap ASR, LLM, and TTS providers a
 
 ## Deployment Modes
 
-You can deploy the AVR infrastructure in different modes and with different provider combinations, depending on your needs.
+You can deploy the DSAI infrastructure in different modes and with different provider combinations, depending on your needs.
 
 ### 1. Headless Deployments (No GUI)
 
@@ -54,19 +54,19 @@ If you don't need the web interface, you can use one of the example docker-compo
 
 The most critical configuration is setting up the correct URLs for your services in the `.env` file:
 
-- `ASR_URL`: The URL where your ASR service is running (e.g., `http://avr-asr-[provider_name]:[port]}/speech-to-text-stream`)
-- `LLM_URL`: The URL where your LLM service is running (e.g., `http://avr-llm-[provider_name]:[port]/prompt-stream`)
-- `TTS_URL`: The URL where your TTS service is running (e.g., `http://avr-tts-[provider_name]:[port]/text-to-speech-stream`)
+- `ASR_URL`: The URL where your ASR service is running (e.g., `http://dsai-asr-[provider_name]:[port]}/speech-to-text-stream`)
+- `LLM_URL`: The URL where your LLM service is running (e.g., `http://dsai-llm-[provider_name]:[port]/prompt-stream`)
+- `TTS_URL`: The URL where your TTS service is running (e.g., `http://dsai-tts-[provider_name]:[port]/text-to-speech-stream`)
 
 If you are using STS (Speech-to-Speech) instead of separate ASR, LLM and TTS services, you only need to configure:
-- `STS_URL`: The URL where your STS service is running (e.g., `ws://avr-sts-[provider_name]:[port]`)
+- `STS_URL`: The URL where your STS service is running (e.g., `ws://dsai-sts-[provider_name]:[port]`)
 You can find an example configuration using OpenAI Realtime in the `docker-compose-openai-realtime.yml` file.
 
-If your provider doesn't support ASR but only STT (Speech-to-Text), you'll need to use the `avr-asr-to-stt` container which handles VAD (Voice Activity Detection) and audio packet composition for your STT service. In this case:
-- Set `ASR_URL` to `http://avr-asr-to-stt:[port]`
-- Configure your `STT_URL` in the environment variables of the `avr-asr-to-stt` container
+If your provider doesn't support ASR but only STT (Speech-to-Text), you'll need to use the `dsai-asr-to-stt` container which handles VAD (Voice Activity Detection) and audio packet composition for your STT service. In this case:
+- Set `ASR_URL` to `http://dsai-asr-to-stt:[port]`
+- Configure your `STT_URL` in the environment variables of the `dsai-asr-to-stt` container
 
-These URLs are used by AVR Core to forward:
+These URLs are used by DSAI Core to forward:
 - Audio chunks to your ASR service
 - Transcripts to your LLM service
 - Responses to your TTS service
@@ -226,22 +226,22 @@ docker-compose -f docker-compose-n8n.yml up -d
 ```env
 DEEPGRAM_API_KEY=your_deepgram_key
 # N8N Configuration
-PUBLIC_CHAT_URL=http://avr-n8n:5678/webhook/your_n8n_public_chat_id/chat
+PUBLIC_CHAT_URL=http://dsai-n8n:5678/webhook/your_n8n_public_chat_id/chat
 ```
 
 **🔧 Included Services:**
 - **N8N Container**: A locally installed N8N instance is included in the docker-compose-n8n.yml file
 - **Web Interface**: Access N8N at `http://localhost:5678` to create and manage your workflows
 - **Persistent Storage**: N8N data is persisted in a local volume for workflow preservation
-- **Webhook Endpoints**: Automatically configured webhook URLs for AVR integration
+- **Webhook Endpoints**: Automatically configured webhook URLs for DSAI integration
 
 **📚 More Details & Documentation:**
 
-For comprehensive guides on using AVR with N8N, including:
+For comprehensive guides on using DSAI with N8N, including:
 - **Setup Tutorials**: Step-by-step configuration guides
 - **Workflow Examples**: Pre-built conversation flows
 
-Visit our detailed documentation: **[AVR + N8N Integration Guide](https://wiki.agentvoiceresponse.com/en/using-avr-with-n8n)**
+Visit our detailed documentation: **[DSAI + N8N Integration Guide](https://wiki.agentvoiceresponse.com/en/using-dsai-with-n8n)**
 
 #### Example 10: Gemini Speech To Speech
 
@@ -293,16 +293,16 @@ Once you have configured and started your services, you can test the setup using
    - First, test the basic connectivity by calling extension `600` (echo test)
    - If you hear your voice echoed back, the basic setup is working
 
-3. **Testing AVR**:
+3. **Testing DSAI**:
    - If you're using the default Asterisk configuration, you'll find extension `5001` in `extensions.conf`
-   - This extension is configured to connect to your `avr-core` container
-   - Call extension `5001` and you should hear the message configured in your AVR-core, processed through your TTS service
+   - This extension is configured to connect to your `dsai-core` container
+   - Call extension `5001` and you should hear the message configured in your DSAI-core, processed through your TTS service
 
-If everything works as expected, your AVR setup is ready for use. Happy testing!
+If everything works as expected, your DSAI setup is ready for use. Happy testing!
 
 ### Using Your Existing Asterisk Installation
 
-Each docker-compose file includes the `avr-asterisk` service, but if you already have Asterisk installed on your system, you don't need to run the containerized Asterisk. You can simply comment out the `avr-asterisk` service in your chosen docker-compose file.
+Each docker-compose file includes the `dsai-asterisk` service, but if you already have Asterisk installed on your system, you don't need to run the containerized Asterisk. You can simply comment out the `dsai-asterisk` service in your chosen docker-compose file.
 
 The only thing you need to do is configure your extensions in your existing Asterisk installation. Here's an example configuration for your `extensions.conf`:
 
@@ -311,11 +311,11 @@ The only thing you need to do is configure your extensions in your existing Aste
 exten => 5001,1,Answer()
 exten => 5001,n,Ringing()
 exten => 5001,n,Set(UUID=${SHELL(uuidgen | tr -d '\n')})
-exten => 5001,n,AudioSocket(${UUID},AVR_HOST_IP_OR_DOMAIN:AVR_HOST_PORT)
+exten => 5001,n,AudioSocket(${UUID},DSAI_HOST_IP_OR_DOMAIN:DSAI_HOST_PORT)
 exten => 5001,n,Hangup()
 ```
 
-Make sure to replace `AVR_HOST_IP_OR_DOMAIN:AVR_HOST_PORT` with the actual IP address or domain and port where your `avr-core` service is running (typically `127.0.0.1:5001` if running locally).
+Make sure to replace `DSAI_HOST_IP_OR_DOMAIN:DSAI_HOST_PORT` with the actual IP address or domain and port where your `dsai-core` service is running (typically `127.0.0.1:5001` if running locally).
 
 ### How to Add Your Own Provider Combination
 
@@ -355,9 +355,9 @@ docker-compose -f docker-compose-app.yml up -d
 *   **NPM:** [https://www.npmjs.com/~agentvoiceresponse](https://www.npmjs.com/~agentvoiceresponse) - Browse our packages.
 *   **Wiki:** [https://wiki.agentvoiceresponse.com/en/home](https://wiki.agentvoiceresponse.com/en/home) - Project documentation and guides.
 
-## Support AVR
+## Support DSAI
 
-AVR is free and open-source. If you find it valuable, consider supporting its development:
+DSAI is free and open-source. If you find it valuable, consider supporting its development:
 
 <a href="https://ko-fi.com/agentvoiceresponse" target="_blank"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support us on Ko-fi"></a>
 

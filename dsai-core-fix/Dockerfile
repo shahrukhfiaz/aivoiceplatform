@@ -1,4 +1,4 @@
-# Fix for broken agentvoiceresponse/avr-core image using multi-stage build
+# Fix for broken agentvoiceresponse/dsai-core image using multi-stage build
 # Stage 1: Use a working base to set up users
 FROM node:22-alpine AS base
 
@@ -7,7 +7,7 @@ RUN cat /etc/passwd > /tmp/passwd && \
     cat /etc/group > /tmp/group
 
 # Stage 2: Fix the broken image
-FROM agentvoiceresponse/avr-core:latest
+FROM agentvoiceresponse/dsai-core:latest
 
 # Copy passwd/group from working base image
 COPY --from=base /tmp/passwd /etc/passwd

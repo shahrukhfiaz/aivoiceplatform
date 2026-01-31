@@ -86,7 +86,7 @@ else
     echo "  - TCP 22 (SSH)"
     echo "  - TCP 80 (HTTP)"
     echo "  - TCP 443 (HTTPS)"
-    echo "  - TCP 5001 (AVR Core)"
+    echo "  - TCP 5001 (DSAI Core)"
     echo "  - TCP 5060 (SIP)"
     echo "  - UDP 10000-20000 (RTP Media)"
 fi

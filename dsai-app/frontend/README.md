@@ -1,6 +1,6 @@
-# AVR Admin Frontend
+# DSAI Admin Frontend
 
-Next.js 14 application that powers the AVR administration panel UI. The project uses Tailwind CSS, shadcn/ui, Framer Motion animations and the shared OpenSaaS AVR design system.
+Next.js 14 application that powers the DSAI administration panel UI. The project uses Tailwind CSS, shadcn/ui, Framer Motion animations and the shared OpenSaaS DSAI design system.
 
 ## Prerequisites
 

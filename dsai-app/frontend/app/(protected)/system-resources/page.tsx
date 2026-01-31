@@ -466,7 +466,7 @@ export default function DockersPage() {
       {/* Containers Table */}
       <Card className="border-border/60">
         <CardHeader>
-          <CardTitle>Containers</CardTitle>
+          <CardTitle>Services</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -481,7 +481,6 @@ export default function DockersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{dictionary.systemResources.table.name}</TableHead>
-                    <TableHead>{dictionary.systemResources.table.image}</TableHead>
                     <TableHead>{dictionary.systemResources.table.state}</TableHead>
                     <TableHead>{dictionary.systemResources.table.status}</TableHead>
                     <TableHead>{dictionary.systemResources.table.created}</TableHead>
@@ -495,9 +494,6 @@ export default function DockersPage() {
                     return (
                       <TableRow key={container.id}>
                         <TableCell className="font-medium">{container.name}</TableCell>
-                        <TableCell>
-                          <span className="font-mono text-xs text-muted-foreground">{container.image}</span>
-                        </TableCell>
                         <TableCell>
                           <Badge className={badgeClass}>
                             {dictionary.systemResources.status[container.state as keyof typeof dictionary.systemResources.status] ??

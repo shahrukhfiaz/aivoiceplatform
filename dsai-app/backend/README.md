@@ -1,6 +1,6 @@
-# AVR Admin Backend
+# DSAI Admin Backend
 
-NestJS backend that powers the AVR admin panel with user management, provider configuration, agent orchestration, and Docker-based lifecycle controls.
+NestJS backend that powers the DSAI admin panel with user management, provider configuration, agent orchestration, and Docker-based lifecycle controls.
 
 ## Features
 
