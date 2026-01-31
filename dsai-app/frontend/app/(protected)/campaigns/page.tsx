@@ -498,13 +498,14 @@ export default function CampaignsPage() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>AI Agent</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ''}>
+              <Select onValueChange={(val) => field.onChange(val === '_none' ? undefined : val)} value={field.value || '_none'}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select agent" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value="_none">None</SelectItem>
                   {agents.map((agent) => (
                     <SelectItem key={agent.id} value={agent.id}>
                       {agent.name} {agent.status === 'running' && '(Running)'}
@@ -523,13 +524,14 @@ export default function CampaignsPage() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Outbound Trunk</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ''}>
+              <Select onValueChange={(val) => field.onChange(val === '_none' ? undefined : val)} value={field.value || '_none'}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select trunk" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value="_none">None</SelectItem>
                   {trunks.map((trunk) => (
                     <SelectItem key={trunk.id} value={trunk.id}>
                       {trunk.name}
