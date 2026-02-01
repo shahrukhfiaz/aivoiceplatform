@@ -96,6 +96,25 @@ export class CoachingController {
 
   // ==================== Insights ====================
 
+  @Get('insights')
+  async getAllInsights(
+    @Query('agentId') agentId?: string,
+    @Query('campaignId') campaignId?: string,
+    @Query('organizationId') organizationId?: string,
+    @Query('insightType') insightType?: InsightType,
+    @Query('acknowledged') acknowledged?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.coachingService.getAllInsights({
+      agentId,
+      campaignId,
+      organizationId,
+      insightType,
+      acknowledged: acknowledged !== undefined ? acknowledged === 'true' : undefined,
+      limit: limit ? parseInt(limit) : 50,
+    });
+  }
+
   @Get('agents/:agentId/insights')
   async getAgentInsights(
     @Param('agentId') agentId: string,

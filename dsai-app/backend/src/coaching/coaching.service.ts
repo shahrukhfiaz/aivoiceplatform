@@ -298,6 +298,35 @@ export class CoachingService {
   }
 
   /**
+   * Get all insights (not filtered by agent)
+   */
+  async getAllInsights(params?: {
+    agentId?: string;
+    campaignId?: string;
+    organizationId?: string;
+    insightType?: InsightType;
+    acknowledged?: boolean;
+    limit?: number;
+  }): Promise<CoachingInsight[]> {
+    const { agentId, campaignId, organizationId, insightType, acknowledged, limit = 50 } = params || {};
+
+    const where: Record<string, unknown> = {
+      isActive: true,
+    };
+    if (agentId) where.agentId = agentId;
+    if (campaignId) where.campaignId = campaignId;
+    if (organizationId) where.organizationId = organizationId;
+    if (insightType) where.insightType = insightType;
+    if (acknowledged !== undefined) where.isAcknowledged = acknowledged;
+
+    return this.insightRepo.find({
+      where,
+      order: { severity: 'DESC', createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  /**
    * Acknowledge an insight
    */
   async acknowledgeInsight(
