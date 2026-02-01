@@ -157,15 +157,15 @@ export default function CoachingPage() {
       const [evaluationsRes, insightsRes, agentsRes, campaignsRes] = await Promise.all([
         apiFetch<{ data: AiEvaluation[]; total: number }>(`/coaching/evaluations?${params.toString()}&limit=50`),
         apiFetch<CoachingInsight[]>(`/coaching/insights?${params.toString()}`),
-        apiFetch<Agent[]>('/agents'),
-        apiFetch<Campaign[]>('/campaigns'),
+        apiFetch<{ data: Agent[]; total: number }>('/agents'),
+        apiFetch<{ data: Campaign[]; total: number }>('/campaigns'),
       ]);
 
-      const evals = evaluationsRes.data || [];
+      const evals = evaluationsRes?.data || [];
       setEvaluations(evals);
-      setInsights(insightsRes || []);
-      setAgents(agentsRes || []);
-      setCampaigns(campaignsRes || []);
+      setInsights(Array.isArray(insightsRes) ? insightsRes : []);
+      setAgents(agentsRes?.data || []);
+      setCampaigns(campaignsRes?.data || []);
 
       // Calculate summary
       const completed = evals.filter((e) => e.status === 'completed');
@@ -173,7 +173,8 @@ export default function CoachingPage() {
       const avgScore = completed.length > 0
         ? completed.reduce((sum, e) => sum + e.totalScore, 0) / completed.length
         : 0;
-      const activeInsights = (insightsRes || []).filter((i) => !i.isAcknowledged).length;
+      const insightsArray = Array.isArray(insightsRes) ? insightsRes : [];
+      const activeInsights = insightsArray.filter((i) => !i.isAcknowledged).length;
 
       const byStatus: Record<string, number> = {
         pending: 0,

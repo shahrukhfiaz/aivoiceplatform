@@ -129,12 +129,12 @@ export default function ScoringPage() {
       const [scoresRes, modelsRes, campaignsRes] = await Promise.all([
         apiFetch<{ data: LeadScore[]; total: number }>(`/scoring/leads?${params.toString()}&limit=50`),
         apiFetch<ScoringModel[]>('/scoring/models'),
-        apiFetch<Campaign[]>('/campaigns'),
+        apiFetch<{ data: Campaign[]; total: number }>('/campaigns'),
       ]);
 
-      setScores(scoresRes.data || []);
-      setModels(modelsRes || []);
-      setCampaigns(campaignsRes || []);
+      setScores(scoresRes?.data || []);
+      setModels(Array.isArray(modelsRes) ? modelsRes : []);
+      setCampaigns(campaignsRes?.data || []);
 
       // Calculate summary from scores
       const allScores = scoresRes.data || [];

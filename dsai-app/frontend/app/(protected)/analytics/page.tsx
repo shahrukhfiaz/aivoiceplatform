@@ -127,15 +127,15 @@ export default function AnalyticsPage() {
         apiFetch<{ data: CallAnalytics[]; total: number }>(`/analytics/calls?${params.toString()}&limit=50`),
         apiFetch<AnalyticsSummary>(`/analytics/summary?${params.toString()}`),
         apiFetch<KeywordConfig[]>('/analytics/keywords'),
-        apiFetch<Campaign[]>('/campaigns'),
-        apiFetch<Agent[]>('/agents'),
+        apiFetch<{ data: Campaign[]; total: number }>('/campaigns'),
+        apiFetch<{ data: Agent[]; total: number }>('/agents'),
       ]);
 
-      setAnalytics(analyticsRes.data || []);
+      setAnalytics(analyticsRes?.data || []);
       setSummary(summaryRes);
-      setKeywords(keywordsRes || []);
-      setCampaigns(campaignsRes || []);
-      setAgents(agentsRes || []);
+      setKeywords(Array.isArray(keywordsRes) ? keywordsRes : []);
+      setCampaigns(campaignsRes?.data || []);
+      setAgents(agentsRes?.data || []);
     } catch (err) {
       console.error('Failed to fetch analytics data:', err);
       // Set defaults on error

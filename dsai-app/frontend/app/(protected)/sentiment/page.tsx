@@ -118,16 +118,16 @@ export default function SentimentPage() {
         apiFetch<SentimentSummary>(`/sentiment/summary?${params.toString()}`),
         apiFetch<SentimentTrend[]>(`/sentiment/trends?${params.toString()}&days=30`),
         apiFetch<CallSentiment[]>(`/sentiment/alerts/negative?${params.toString()}&limit=10`),
-        apiFetch<Campaign[]>('/campaigns'),
-        apiFetch<Agent[]>('/agents'),
+        apiFetch<{ data: Campaign[]; total: number }>('/campaigns'),
+        apiFetch<{ data: Agent[]; total: number }>('/agents'),
       ]);
 
-      setSentiments(sentimentsRes.data || []);
+      setSentiments(sentimentsRes?.data || []);
       setSummary(summaryRes);
-      setTrends(trendsRes || []);
-      setNegativeCalls(alertsRes || []);
-      setCampaigns(campaignsRes || []);
-      setAgents(agentsRes || []);
+      setTrends(Array.isArray(trendsRes) ? trendsRes : []);
+      setNegativeCalls(Array.isArray(alertsRes) ? alertsRes : []);
+      setCampaigns(campaignsRes?.data || []);
+      setAgents(agentsRes?.data || []);
     } catch (err) {
       console.error('Failed to fetch sentiment data:', err);
       // Set defaults on error
