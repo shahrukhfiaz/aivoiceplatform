@@ -132,7 +132,17 @@ export default function AnalyticsPage() {
       ]);
 
       setAnalytics(analyticsRes?.data || []);
-      setSummary(summaryRes);
+      // Ensure all summary properties have default values
+      setSummary({
+        totalCalls: summaryRes?.totalCalls ?? 0,
+        avgTalkRatio: summaryRes?.avgTalkRatio ?? 0,
+        avgScriptAdherence: summaryRes?.avgScriptAdherence ?? 0,
+        avgSilenceSeconds: summaryRes?.avgSilenceSeconds ?? 0,
+        totalKeywordMatches: summaryRes?.totalKeywordMatches ?? 0,
+        avgAgentWpm: summaryRes?.avgAgentWpm ?? 0,
+        avgCustomerWpm: summaryRes?.avgCustomerWpm ?? 0,
+        avgInterruptions: summaryRes?.avgInterruptions ?? 0,
+      });
       setKeywords(Array.isArray(keywordsRes) ? keywordsRes : []);
       setCampaigns(campaignsRes?.data || []);
       setAgents(agentsRes?.data || []);

@@ -123,7 +123,29 @@ export default function SentimentPage() {
       ]);
 
       setSentiments(sentimentsRes?.data || []);
-      setSummary(summaryRes);
+      // Ensure all summary properties have default values
+      setSummary({
+        totalCalls: summaryRes?.totalCalls ?? 0,
+        avgSentiment: summaryRes?.avgSentiment ?? 0,
+        sentimentDistribution: summaryRes?.sentimentDistribution ?? {
+          very_negative: 0,
+          negative: 0,
+          neutral: 0,
+          positive: 0,
+          very_positive: 0,
+        },
+        emotionDistribution: summaryRes?.emotionDistribution ?? {
+          angry: 0,
+          frustrated: 0,
+          confused: 0,
+          neutral: 0,
+          satisfied: 0,
+          happy: 0,
+          excited: 0,
+        },
+        satisfactionRate: summaryRes?.satisfactionRate ?? 0,
+        avgSentimentDelta: summaryRes?.avgSentimentDelta ?? 0,
+      });
       setTrends(Array.isArray(trendsRes) ? trendsRes : []);
       setNegativeCalls(Array.isArray(alertsRes) ? alertsRes : []);
       setCampaigns(campaignsRes?.data || []);
